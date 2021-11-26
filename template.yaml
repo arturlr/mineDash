@@ -1,0 +1,462 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+    "MineDash Backend \n"
+
+Parameters:  
+
+  ProjectName:
+    Type: String
+    Default: minedash
+  AppValue:
+    Type: String
+    Default: minecraft
+  CorsOrigin:
+    Type: String
+    Default: "'*'"
+  CorsHeaders:
+    Type: String
+    Default: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+  CorsMethods:
+    Type: String
+    Default: "'OPTIONS,POST'"
+    
+Globals:
+  Function:
+    AutoPublishAlias: live
+    Handler: index.handler
+    MemorySize: 256
+    Runtime: python3.8
+    Timeout: 120
+    Tracing: Active
+
+Resources:
+  RunMinecraftDocument:
+    Type: AWS::SSM::Document
+    Properties:
+      Content:
+        schemaVersion: '2.2'
+        description: 'Run Minecraft on EC2 instance'
+        parameters:
+          xmsG:
+            type: String
+            description: 'initial memory size in Gigabyte (default 1)'
+            default: "1"
+            allowedPattern: "^[0-9]*$"
+          xmxG:
+            type: String
+            description: 'Total memory allowed to be used in Gigabyte (default 1)'
+            default: "1"
+            allowedPattern: "^[0-9]*$"
+        mainSteps:
+          - action: aws:runShellScript
+            name: runCommands
+            inputs:
+              runCommand:
+                - 'cd /opt/minecraft/server'
+                - 'sudo -u minecraft java -Xmx{{xmxG}}G -Xms{{xmsG}}G -jar server.jar nogui &'                
+                - 'echo "Run Minecraft Successful"'
+      DocumentType: Command
+
+  GetServerInfoProxyResource:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      RestApiId: !Sub '{{resolve:ssm:/amplify/${ProjectName}/apiId:1}}'
+      ParentId: !Sub '{{resolve:ssm:/amplify/${ProjectName}/apiParentId:1}}'
+      PathPart: 'info'
+
+  GetServerInfoProxyMethod:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      RestApiId: !Sub '{{resolve:ssm:/amplify/${ProjectName}/apiId:1}}'
+      ResourceId: !Ref GetServerInfoProxyResource
+      HttpMethod: POST
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizationScopes:
+        - openid
+        - email
+        - profile
+      AuthorizerId: !Sub '{{resolve:ssm:/amplify/${ProjectName}/apiAuthId:1}}'
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub >-
+          arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetServerInfo.Arn}/invocations
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseTemplates:
+              application/json: $input.json('$')
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: !Ref CorsHeaders
+              method.response.header.Access-Control-Allow-Methods: !Ref CorsMethods
+              method.response.header.Access-Control-Allow-Origin: !Ref CorsOrigin
+        RequestTemplates:
+          application/json: $input.json('$')
+      MethodResponses:
+        - ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+          StatusCode: '200'
+  
+  GetServerInfoOptionMethod:
+    Type: "AWS::ApiGateway::Method"
+    Properties:
+      RestApiId: !Sub '{{resolve:ssm:/amplify/${ProjectName}/apiId:1}}'
+      ResourceId: !Ref GetServerInfoProxyResource
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: !Ref CorsHeaders
+              method.response.header.Access-Control-Allow-Methods: !Ref CorsMethods
+              method.response.header.Access-Control-Allow-Origin: !Ref CorsOrigin
+            ResponseTemplates:
+              application/json: ''
+            StatusCode: '200'
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - ResponseModels:
+            application/json: 'Empty'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Origin: false
+          StatusCode: '200'
+      
+  GetServerInfoInvokePermissions:
+    Type: "AWS::Lambda::Permission"
+    Properties: 
+      Action: "lambda:InvokeFunction"        
+      FunctionName: !GetAtt GetServerInfo.Arn
+      Principal: "apigateway.amazonaws.com"
+      SourceArn: !Join [ "", ["arn:aws:execute-api:", !Ref "AWS::Region", ":", !Ref "AWS::AccountId", ":", !Sub '{{resolve:ssm:/amplify/${ProjectName}/apiId:1}}', "/*/*/*" ] ] 
+
+  GetServerInfo:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: ./lambdas/getServerInfo/
+      Environment:
+        Variables:
+          aplicationName: !Ref ProjectName
+          appValue: !Ref AppValue
+      Policies:
+        - CostExplorerReadOnlyPolicy: {}
+        - arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess
+        - arn:aws:iam::aws:policy/CloudWatchReadOnlyAccess
+        - arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess
+        - arn:aws:iam::aws:policy/AWSCloudTrailReadOnlyAccess
+
+  StartServer:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: ./lambdas/StartServer/
+      Policies:
+        - arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess
+        - arn:aws:iam::aws:policy/CloudWatchReadOnlyAccess
+        - arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess
+        - Version: '2012-10-17' # Policy Document
+          Statement:
+            - Effect: Allow
+              Action:
+                - ec2:StartInstances
+              Resource: '*'
+      Environment:
+        Variables:
+          aplicationName: !Ref ProjectName
+          appValue: !Ref AppValue
+
+  GetServerStatusProxyResource:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      RestApiId: !Sub '{{resolve:ssm:/amplify/${ProjectName}/apiId:1}}'
+      ParentId: !Sub '{{resolve:ssm:/amplify/${ProjectName}/apiParentId:1}}'
+      PathPart: 'start'
+
+  GetServerStatusProxyMethod:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      RestApiId: !Sub '{{resolve:ssm:/amplify/${ProjectName}/apiId:1}}'
+      ResourceId: !Ref GetServerStatusProxyResource
+      HttpMethod: POST
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizationScopes:
+        - openid
+        - email
+        - profile
+      AuthorizerId: !Sub '{{resolve:ssm:/amplify/${ProjectName}/apiAuthId:1}}'
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub >-
+          arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetServerStatus.Arn}/invocations
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseTemplates:
+              application/json: $input.json('$')
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: !Ref CorsHeaders
+              method.response.header.Access-Control-Allow-Methods: !Ref CorsMethods
+              method.response.header.Access-Control-Allow-Origin: !Ref CorsOrigin
+        RequestTemplates:
+          application/json: $input.json('$')
+      MethodResponses:
+        - ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+          StatusCode: '200'
+  
+  
+  GetServerStatusOptionMethod:
+    Type: "AWS::ApiGateway::Method"
+    Properties:
+      RestApiId: !Sub '{{resolve:ssm:/amplify/${ProjectName}/apiId:1}}'
+      ResourceId: !Ref GetServerStatusProxyResource
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: !Ref CorsHeaders
+              method.response.header.Access-Control-Allow-Methods: !Ref CorsMethods
+              method.response.header.Access-Control-Allow-Origin: !Ref CorsOrigin
+            ResponseTemplates:
+              application/json: ''
+            StatusCode: '200'
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - ResponseModels:
+            application/json: 'Empty'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Origin: false
+          StatusCode: '200'
+      
+  GetServerStatusInvokePermissions:
+    Type: "AWS::Lambda::Permission"
+    Properties: 
+      Action: "lambda:InvokeFunction"        
+      FunctionName: !GetAtt GetServerStatus.Arn
+      Principal: "apigateway.amazonaws.com"
+      SourceArn: !Join [ "", ["arn:aws:execute-api:", !Ref "AWS::Region", ":", !Ref "AWS::AccountId", ":", !Sub '{{resolve:ssm:/amplify/${ProjectName}/apiId:1}}', "/*/*/*" ] ] 
+
+  GetServerStatus:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: ./lambdas/getServerStatus/
+      Policies:
+        - arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess
+        - arn:aws:iam::aws:policy/CloudWatchReadOnlyAccess
+        - arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess
+        - StepFunctionsExecutionPolicy:
+            StateMachineName: !GetAtt StateMachine.Name
+        - Version: '2012-10-17' # Policy Document
+          Statement:
+            - Effect: Allow
+              Action:
+                - cloudwatch:PutMetricAlarm
+              Resource: !GetAtt minecraftAlarm.Arn
+      Environment:
+        Variables: 
+          StepFunctionsArn: !Ref StateMachine
+          AppValue: !Ref AppValue
+          minecraftAlarmName: !Ref minecraftAlarm
+          aplicationName: !Ref ProjectName
+
+  SendCommand:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: ./lambdas/sendCommand/
+      Policies:
+        - arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess
+        - arn:aws:iam::aws:policy/CloudWatchReadOnlyAccess
+        - arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess
+        - Version: '2012-10-17' # Policy Document
+          Statement:
+            - Effect: Allow
+              Action:
+                - ssm:List*
+                - ssm:Describe*
+                - ssm:Get*
+                - ssm:SendCommand
+              Resource: '*'
+      Environment:
+        Variables:
+          aplicationName: !Ref ProjectName
+
+  minecraftAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+        ActionsEnabled: true
+        OKActions: []
+        AlarmActions: [ !Sub "arn:aws:automate:${AWS::Region}:ec2:stop" ]
+        InsufficientDataActions: []
+        MetricName: NetworkOut
+        Namespace: AWS/EC2
+        Statistic: Average
+        Dimensions:
+          - Name: InstanceId
+            Value: 'i-0000000000'
+        Period: 300
+        EvaluationPeriods: 10
+        DatapointsToAlarm: 10
+        Threshold: 20000
+        TreatMissingData: missing
+        ComparisonOperator: LessThanOrEqualToThreshold
+
+  StateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: !Sub '${ProjectName}-StateMachine'
+      StateMachineType: STANDARD
+      DefinitionString: |-
+        {
+          "Comment": "MineDash StateMachine",
+          "StartAt": "Pass",
+          "States": {
+            "Pass": {
+              "Type": "Pass",
+              "Next": "StartServer"
+            },
+            "StartServer": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "OutputPath": "$.Payload",
+              "Parameters": {
+                "Payload.$": "$",
+                "FunctionName": "${StartServerArn}"
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException"
+                  ],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 6,
+                  "BackoffRate": 2
+                }
+              ],
+              "Next": "Choice"
+            },
+            "Choice": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "And": [
+                    {
+                      "Variable": "$.isInstanceReady",
+                      "BooleanEquals": true
+                    },
+                    {
+                      "Variable": "$.state",
+                      "StringEquals": "running"
+                    }
+                  ],
+                  "Next": "ExecuteSSM"
+                },
+                {
+                  "Variable": "$.isSuccessful",
+                  "BooleanEquals": false,
+                  "Next": "Fail"
+                }
+              ],
+              "Default": "Wait"
+            },
+            "Wait": {
+              "Type": "Wait",
+              "Seconds": 45,
+              "Next": "StartServer"
+            },
+            "ExecuteSSM": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "OutputPath": "$.Payload",
+              "Parameters": {
+                "Payload.$": "$",
+                "FunctionName": "${SendCommandArn}"
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException"
+                  ],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 6,
+                  "BackoffRate": 2
+                }
+              ],
+              "End": true
+            },
+            "Fail": {
+              "Type": "Fail"
+            }
+          }
+        }
+      DefinitionSubstitutions:
+        SendCommandArn: !GetAtt SendCommand.Arn
+        StartServerArn: !GetAtt StartServer.Arn
+      RoleArn: !GetAtt StatesExecutionRole.Arn
+      LoggingConfiguration:
+        Destinations:
+          - CloudWatchLogsLogGroup:
+             LogGroupArn: !GetAtt StateMachineLogGroup.Arn
+        IncludeExecutionData: True
+        Level: ALL
+
+  StateMachineLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '${ProjectName}-StateMachine-LogGroup-${AWS::Region}'
+  
+  StatesExecutionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - !Sub states.${AWS::Region}.amazonaws.com
+            Action: "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: StatesExecutionPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                  - logs:CreateLogDelivery
+                  - logs:GetLogDelivery
+                  - logs:UpdateLogDelivery
+                  - logs:DeleteLogDelivery
+                  - logs:ListLogDeliveries
+                  - logs:PutResourcePolicy
+                  - logs:DescribeResourcePolicies
+                  - logs:DescribeLogGroups
+                Resource: "*"
+
+Outputs:
+  StateMachineArn:
+        Value: !Ref StateMachine
+  StateMachineName:
+      Value: !GetAtt StateMachine.Name
+  GetServerInfoArn:
+      Value: !GetAtt GetServerInfo.Arn
+  SendCommandArn:
+      Value: !GetAtt SendCommand.Arn

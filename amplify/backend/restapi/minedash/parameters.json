@@ -1,0 +1,9 @@
+{
+    "ProjectName": "minedash",
+    "AuthCognitoUserPoolId": {
+        "Fn::GetAtt": [
+            "authminedash02190350",
+            "Outputs.UserPoolId"
+        ]
+    }
+}
