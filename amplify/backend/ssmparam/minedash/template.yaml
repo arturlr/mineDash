@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: 2010-09-09
+AWSTemplateFormatVersion: '2010-09-09'
 Parameters:
   env:
     Type: String
@@ -8,13 +8,18 @@ Parameters:
     Description: A description to identify project
   AuthCognitoUserPoolId:
     Type: String
-    Description: The id of an existing User Pool to connect. If this is changed, a user pool will not be created for you.
+    Description: >-
+      The id of an existing User Pool to connect. If this is changed, a user
+      pool will not be created for you.
     Default: NONE
-
 Resources:
   CognitoIdKey:
-    Type: "AWS::SSM::Parameter"
+    Type: AWS::SSM::Parameter
     Properties:
-      Name: !Sub "/amplify/${ProjectName}/cognitoPoolId"
-      Type: "String"
-      Value: !Ref AuthCognitoUserPoolId
+      Name:
+        Fn::Sub: /amplify/${ProjectName}/cognitoPoolId
+      Type: String
+      Value:
+        Ref: AuthCognitoUserPoolId
+Description: >-
+  {"createdOn":"Mac","createdBy":"Amplify","createdWith":"7.5.2","stackType":"ssmparam-Ssm","metadata":{}}
