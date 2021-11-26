@@ -4,7 +4,7 @@ backend:
     preBuild:
       commands:
         - export PREFIX=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 5 | head -n 1)
-        - sed -i "s|#domain#|${PREFIX}|g" ./amplify/backend/auth/minedash02190350/parameters.json
+        - sed -i "s|#domain#|minedash-${PREFIX}|g" ./amplify/backend/auth/minedash02190350/parameters.json
     build:
       commands:      
         - '# Execute Amplify CLI with the helper script'
