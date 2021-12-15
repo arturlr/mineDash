@@ -7,5 +7,7 @@
  */
 export default {
   user: "",
-  clientIp: ""
+  clientIp: "",
+  loading: false,
+  paginationToken: ""
 };

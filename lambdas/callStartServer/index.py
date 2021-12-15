@@ -14,6 +14,7 @@ sfn = boto3.client('stepfunctions')
 cw_client = boto3.client('cloudwatch')
 
 sftArn = os.getenv('StepFunctionsArn')
+cognitoAdminGroupName = os.getenv('cognitoAdminGroupName')
 minecraftAlarmName = os.getenv('minecraftAlarmName')
 botoSession = boto3.session.Session()
 awsRegion = botoSession.region_name
@@ -65,8 +66,18 @@ def updateAlarm(instanceId):
         ComparisonOperator="LessThanOrEqualToThreshold"   
     )
 
-def IsInstanceReady(instanceId):
-    logger.info("IsInstanceReady: " + instanceId )
+def belongsToGroup(groups):
+    split_groups = groups.split(",")
+
+    for group in split_groups:
+        if (group == cognitoAdminGroupName):    
+            return True
+            
+    return False
+
+
+def isInstanceReady(instanceId):
+    logger.info("isInstanceReady: " + instanceId )
     statusRsp = getInstanceStatus(instanceId)
     
     if (len(statusRsp["InstanceStatuses"])) == 0:
@@ -81,12 +92,19 @@ def IsInstanceReady(instanceId):
         return False
 
 def handler(event, context):
-    print(event)
     proxyRsp={}
     proxyRsp["headers"] = {
            'Content-Type': 'application/json', 
            'Access-Control-Allow-Origin': '*' 
        }
+
+    cognitoGroups = event["requestContext"]["authorizer"]["claims"]["cognito:groups"]
+    if not belongsToGroup(cognitoGroups):
+        logger.warning("Not Authorized" )
+        proxyRsp["statusCode"]=401
+        proxyRsp["body"]= {'msg': 'User not authorized to start server'}
+        return response_proxy(proxyRsp)
+
     try:                 
         if not 'body' in event:
             proxyRsp["statusCode"]=500
@@ -113,15 +131,15 @@ def handler(event, context):
 
         updateAlarm(instanceId)
 
-        ## Invoking Step-Functions
+        # Invoking Step-Functions
 
         sfn_rsp = sfn.start_execution(
-                stateMachineArn=sftArn,
-                input='{\"instanceId\" : \"' + instanceId + '\"}' 
-            )
+                 stateMachineArn=sftArn,
+                 input='{\"instanceId\" : \"' + instanceId + '\"}' 
+          )
 
         proxyRsp["statusCode"]=200
-        proxyRsp["body"]={'isInstanceReady': IsInstanceReady(instanceId), 'state': state, 'elapsedTime': int(elapsedTime.total_seconds()) }
+        proxyRsp["body"]={'isInstanceReady': isInstanceReady(instanceId), 'state': state, 'elapsedTime': int(elapsedTime.total_seconds()) }
 
         return response_proxy(proxyRsp)
             

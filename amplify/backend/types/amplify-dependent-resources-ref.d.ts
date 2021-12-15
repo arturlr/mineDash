@@ -1,19 +1,29 @@
 export type AmplifyDependentResourcesAttributes = {
     "auth": {
-        "minedash02190350": {
+        "minedash438869b0": {
             "IdentityPoolId": "string",
             "IdentityPoolName": "string",
+            "HostedUIDomain": "string",
+            "OAuthMetadata": "string",
             "UserPoolId": "string",
             "UserPoolArn": "string",
             "UserPoolName": "string",
             "AppClientIDWeb": "string",
-            "AppClientID": "string",
-            "CreatedSNSRole": "string"
+            "AppClientID": "string"
+        },
+        "userPoolGroups": {
+            "adminGroupRole": "string"
         }
     },
-    "restapi": {
-        "minedash": {
+    "custom": {
+        "restapi": {
             "ApiUrl": "string"
+        }
+    },
+    "api": {
+        "minedash": {
+            "GraphQLAPIIdOutput": "string",
+            "GraphQLAPIEndpointOutput": "string"
         }
     }
 }

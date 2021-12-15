@@ -1,10 +1,10 @@
 {
   "version": "1",
   "cognitoConfig": {
-    "identityPoolName": "minedash02190350_identitypool_02190350",
+    "identityPoolName": "minedash438869b0_identitypool_438869b0",
     "allowUnauthenticatedIdentities": false,
-    "resourceNameTruncated": "minedash02190350",
-    "userPoolName": "minedash02190350_userpool_02190350",
+    "resourceNameTruncated": "mineda438869b0",
+    "userPoolName": "minedash438869b0_userpool_438869b0",
     "autoVerifiedAttributes": [
       "email"
     ],
@@ -31,19 +31,28 @@
     "userpoolClientReadAttributes": [
       "email"
     ],
-    "userpoolClientLambdaRole": "minedash02190350_userpoolclient_lambda_role",
+    "userpoolClientLambdaRole": "mineda438869b0_userpoolclient_lambda_role",
     "userpoolClientSetAttributes": false,
+    "sharedId": "438869b0",
+    "resourceName": "minedash438869b0",
     "authSelections": "identityPoolAndUserPool",
-    "resourceName": "minedash02190350",
-    "serviceName": "Cognito",
-    "useDefault": "default",
-    "sharedId": "02190350",
-    "userPoolGroupList": [],
+    "useDefault": "defaultSocial",
+    "hostedUI": true,
     "usernameAttributes": [
       "email"
     ],
+    "triggers": {},
+    "hostedUIDomainName": "minedash438869b0-438869b0",
+    "authProvidersUserPool": [
+      "Google"
+    ],
+    "hostedUIProviderMeta": "[{\"ProviderName\":\"Google\",\"authorize_scopes\":\"openid email profile\",\"AttributeMapping\":{\"email\":\"email\",\"username\":\"sub\"}}]",
+    "userPoolGroupList": [
+      "admin"
+    ],
+    "serviceName": "Cognito",
     "usernameCaseSensitive": false,
-    "hostedUI": false,
+    "useEnabledMfas": true,
     "authRoleArn": {
       "Fn::GetAtt": [
         "AuthRole",
@@ -57,8 +66,12 @@
       ]
     },
     "breakCircularDependency": true,
-    "useEnabledMfas": false,
     "dependsOn": [],
-    "authProviders": []
+    "hostedUIProviderCreds": "[]",
+    "oAuthMetadata": "{\"AllowedOAuthFlows\":[\"code\"],\"AllowedOAuthScopes\":[\"phone\",\"email\",\"openid\",\"profile\",\"aws.cognito.signin.user.admin\"],\"CallbackURLs\":[\"http://localhost:8080/\",\"https://minedash.geckobyte.ca/\"],\"LogoutURLs\":[\"http://localhost:8080/\",\"https://minedash.geckobyte.ca/\"]}",
+    "parentStack": {
+      "Ref": "AWS::StackId"
+    },
+    "permissions": []
   }
 }

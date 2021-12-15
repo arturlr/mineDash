@@ -62,35 +62,14 @@
               ></v-text-field>
 
               <v-btn
-                v-if="state === 'stopped'"
                 title
                 medium
-                color="error"
+                v-bind:color="state==='stopped' ? 'error' : state === 'running' && instanceStatus === 'ok' ? 'success' : 'warning'"
                 ><v-icon left>
                   mdi-power
                 </v-icon>
-                stopped
-              </v-btn>
-              <v-btn
-                v-if="state === 'running' && instanceStatus != 'ok'"
-                title
-                medium
-                color="warning"
-                ><v-icon left>
-                  mdi-power
-                </v-icon>
-                LOADING
-              </v-btn>
-              <v-btn
-                v-if="state === 'running' && instanceStatus === 'ok'"
-                title
-                medium
-                color="success"
-                ><v-icon left>
-                  mdi-power
-                </v-icon>
-                running
-              </v-btn>
+                {{ state }}
+              </v-btn>            
                 <v-btn
                   v-if="state === 'stopped'"
                   class="p-8"
@@ -218,6 +197,7 @@
 <script>
 import { VueFrappe } from 'vue2-frappe'
 import { Auth } from "aws-amplify";
+import { mapGetters } from "vuex";
 
 export default {
   name: "App",
@@ -252,9 +232,10 @@ export default {
   },
 
   async mounted() {
+    let actionMsg = null
     try {      
       const currentSession = await Auth.currentSession();
-      const jwt = currentSession.getAccessToken().getJwtToken();
+      const jwt = currentSession.getAccessToken().getJwtToken();   
     
       const options = {
         headers: {
@@ -290,14 +271,16 @@ export default {
           this.items.push({ type: "stop", dt: rec[0], user: user });
         }
         });
-        this.timeEpoch = Date.now();
+        this.timeEpoch = Date.now();        
         this.networkOutChartData = this.getChartData("networkOut");
-        this.cpuChartData = this.getChartData("cpuUtilization");
+        this.cpuChartData = this.getChartData("cpuUtilization");        
+        actionMsg = "load page"
 
       }).catch( function (error) {
         if (error.response) {
           vm.errorAlert = true;
           vm.errorMsg = error.response.data.msg
+          actionMsg = error.response.data.msg
         } else if (error.request) {
           // The request was made but no response was received
           // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
@@ -312,9 +295,18 @@ export default {
     } catch (error) {
       //this.errorAlert = true;
       //this.errorMsg = error.errorMsg
+      actionMsg = error
       console.error(error)
     }
+
+    await this.writeLog(actionMsg)
   
+  },
+  computed: {
+    ...mapGetters({
+      isAuthenticated: "profile/isAuthenticated",
+      email: "profile/email"
+    }),
   },
   methods: {
     classColor(state) {
@@ -327,6 +319,18 @@ export default {
       else {
         return "orange"
       }      
+    },
+    async writeLog(msg) {
+      // Calculating expiration time
+      const d = new Date();
+      d.setDate(d.getDate() + 60);
+      const expirationEpoch = Math.round(d.getTime() / 1000)
+
+      await this.$store.dispatch("profile/saveAuditLogin", {
+        email: this.email,
+        action: msg,
+        expirationEpoch: expirationEpoch
+      });
     },
     setShow() {
       setTimeout(() => {
@@ -348,10 +352,10 @@ export default {
           this.copyDialog = true;
     },
     async startServer() {
+      let actionMsg = null
       try {
         const currentSession = await Auth.currentSession();
         const jwt = currentSession.getAccessToken().getJwtToken();
-
         const options = {
           headers: {
             'Content-Type': 'application/json;charset=utf-8',
@@ -361,21 +365,24 @@ export default {
 
         let vm = this;
         await this.$http.post(this.baseUrl + "start", 
-            { instanceId: this.instanceName }, options).then((result) => {
+            { instanceId: this.instanceName }, options).then(() => {
             this.state = "pending";
             this.successAlert = true;
-            console.log(result);
+            actionMsg = this.instanceName + " started";
         }).catch( function (error) {
         if (error.response) {
           vm.errorAlert = true;
           vm.errorMsg = error.response.data.msg
+          actionMsg = error.response.data.msg;
         } else if (error.request) {
           // The request was made but no response was received
           // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
           // http.ClientRequest in node.js
+          actionMsg = error.request;
           console.error(error.request);
         } else {
           // Something happened in setting up the request that triggered an Error
+          actionMsg = error.message;
           console.error('Error', error.message);
         }
       });
@@ -384,6 +391,9 @@ export default {
         this.errorMsg = error;
         console.error(error);
       }
+
+      await this.writeLog(actionMsg)
+
     },
     getChartData(metricName) {
       let labels = [];

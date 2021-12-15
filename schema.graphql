@@ -1,0 +1,10 @@
+type loginAudit @model
+@auth(rules: [
+  { allow:  private, provider: iam }, 
+  { allow:  private, provider: userPools }
+]){
+  id: ID!
+  email: AWSEmail!
+  action: String!
+  timestamp: AWSDateTime!
+}

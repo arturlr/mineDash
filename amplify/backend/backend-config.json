@@ -1,12 +1,15 @@
 {
   "auth": {
-    "minedash02190350": {
+    "minedash438869b0": {
       "service": "Cognito",
       "providerPlugin": "awscloudformation",
       "dependsOn": [],
       "customAuth": false,
       "frontendAuthConfig": {
-        "loginMechanisms": [
+        "socialProviders": [
+          "GOOGLE"
+        ],
+        "usernameAttributes": [
           "EMAIL"
         ],
         "signupAttributes": [
@@ -24,18 +27,95 @@
           "EMAIL"
         ]
       }
+    },
+    "userPoolGroups": {
+      "service": "Cognito-UserPool-Groups",
+      "providerPlugin": "awscloudformation",
+      "dependsOn": [
+        {
+          "category": "auth",
+          "resourceName": "minedash438869b0",
+          "attributes": [
+            "UserPoolId",
+            "AppClientIDWeb",
+            "AppClientID",
+            "IdentityPoolId"
+          ]
+        }
+      ]
     }
   },
-  "restapi": {
-    "minedash": {
-      "service": "ApiGateway",
-      "providerPlugin": "awscloudformation"
+  "custom": {
+    "restapi": {
+      "service": "customCloudformation",
+      "providerPlugin": "awscloudformation",
+      "dependsOn": [
+        {
+          "category": "auth",
+          "resourceName": "minedash438869b0",
+          "attributes": [
+            "IdentityPoolId",
+            "IdentityPoolName",
+            "HostedUIDomain",
+            "OAuthMetadata",
+            "UserPoolId",
+            "UserPoolArn",
+            "UserPoolName",
+            "AppClientIDWeb",
+            "AppClientID"
+          ]
+        }
+      ]
+    },
+    "ssmparam": {
+      "service": "customCloudformation",
+      "providerPlugin": "awscloudformation",
+      "dependsOn": [
+        {
+          "category": "auth",
+          "resourceName": "minedash438869b0",
+          "attributes": [
+            "IdentityPoolId",
+            "IdentityPoolName",
+            "HostedUIDomain",
+            "OAuthMetadata",
+            "UserPoolId",
+            "UserPoolArn",
+            "UserPoolName",
+            "AppClientIDWeb",
+            "AppClientID"
+          ]
+        },
+        {
+          "category": "api",
+          "resourceName": "minedash",
+          "attributes": [
+            "GraphQLAPIIdOutput",
+            "GraphQLAPIEndpointOutput"
+          ]
+        }
+      ]
     }
   },
-  "ssmparam": {
+  "api": {
     "minedash": {
-      "service": "Ssm",
-      "providerPlugin": "awscloudformation"
+      "service": "AppSync",
+      "providerPlugin": "awscloudformation",
+      "output": {
+        "authConfig": {
+          "defaultAuthentication": {
+            "authenticationType": "AMAZON_COGNITO_USER_POOLS",
+            "userPoolConfig": {
+              "userPoolId": "authminedash438869b0"
+            }
+          },
+          "additionalAuthenticationProviders": [
+            {
+              "authenticationType": "AWS_IAM"
+            }
+          ]
+        }
+      }
     }
   }
 }

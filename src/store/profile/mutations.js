@@ -45,3 +45,11 @@ export const SET_CLIENT_IP = (state, ipaddress) => {
   console.log(ipaddress)
   state.clientIp = ipaddress;
 };
+
+export const SET_LOADER = (state, isLoading) => {
+  state.loading = isLoading;
+};
+
+export const SET_PAGINATION = (state, paginationToken) => {
+  state.paginationToken = paginationToken;
+};

@@ -11,6 +11,9 @@ Parameters:
   AppValue:
     Type: String
     Default: minecraft
+  CognitoAdminGroupName:
+    Type: String
+    Default: admin
   CorsOrigin:
     Type: String
     Default: "'*'"
@@ -170,18 +173,18 @@ Resources:
           aplicationName: !Ref ProjectName
           appValue: !Ref AppValue
 
-  GetServerStatusProxyResource:
+  callStartServerProxyResource:
     Type: 'AWS::ApiGateway::Resource'
     Properties:
       RestApiId: !Sub '{{resolve:ssm:/amplify/${ProjectName}/apiId:1}}'
       ParentId: !Sub '{{resolve:ssm:/amplify/${ProjectName}/apiParentId:1}}'
       PathPart: 'start'
 
-  GetServerStatusProxyMethod:
+  callStartServerProxyMethod:
     Type: 'AWS::ApiGateway::Method'
     Properties:
       RestApiId: !Sub '{{resolve:ssm:/amplify/${ProjectName}/apiId:1}}'
-      ResourceId: !Ref GetServerStatusProxyResource
+      ResourceId: !Ref callStartServerProxyResource
       HttpMethod: POST
       AuthorizationType: COGNITO_USER_POOLS
       AuthorizationScopes:
@@ -193,7 +196,7 @@ Resources:
         Type: AWS_PROXY
         IntegrationHttpMethod: POST
         Uri: !Sub >-
-          arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetServerStatus.Arn}/invocations
+          arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${callStartServer.Arn}/invocations
         IntegrationResponses:
           - StatusCode: 200
             ResponseTemplates:
@@ -212,11 +215,11 @@ Resources:
           StatusCode: '200'
   
   
-  GetServerStatusOptionMethod:
+  callStartServerOptionMethod:
     Type: "AWS::ApiGateway::Method"
     Properties:
       RestApiId: !Sub '{{resolve:ssm:/amplify/${ProjectName}/apiId:1}}'
-      ResourceId: !Ref GetServerStatusProxyResource
+      ResourceId: !Ref callStartServerProxyResource
       AuthorizationType: NONE
       HttpMethod: OPTIONS
       Integration:
@@ -241,18 +244,18 @@ Resources:
             method.response.header.Access-Control-Allow-Origin: false
           StatusCode: '200'
       
-  GetServerStatusInvokePermissions:
+  callStartServerInvokePermissions:
     Type: "AWS::Lambda::Permission"
     Properties: 
       Action: "lambda:InvokeFunction"        
-      FunctionName: !GetAtt GetServerStatus.Arn
+      FunctionName: !GetAtt callStartServer.Arn
       Principal: "apigateway.amazonaws.com"
       SourceArn: !Join [ "", ["arn:aws:execute-api:", !Ref "AWS::Region", ":", !Ref "AWS::AccountId", ":", !Sub '{{resolve:ssm:/amplify/${ProjectName}/apiId:1}}', "/*/*/*" ] ] 
 
-  GetServerStatus:
+  callStartServer:
     Type: AWS::Serverless::Function 
     Properties:
-      CodeUri: ./lambdas/getServerStatus/
+      CodeUri: ./lambdas/callStartServer/
       Policies:
         - arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess
         - arn:aws:iam::aws:policy/CloudWatchReadOnlyAccess
@@ -271,6 +274,7 @@ Resources:
           AppValue: !Ref AppValue
           minecraftAlarmName: !Ref minecraftAlarm
           aplicationName: !Ref ProjectName
+          cognitoAdminGroupName: !Ref CognitoAdminGroupName
 
   SendCommand:
     Type: AWS::Serverless::Function 
