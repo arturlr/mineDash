@@ -42,7 +42,6 @@ export const SET_USER = (state, username) => {
 };
 
 export const SET_CLIENT_IP = (state, ipaddress) => {
-  console.log(ipaddress)
   state.clientIp = ipaddress;
 };
 
