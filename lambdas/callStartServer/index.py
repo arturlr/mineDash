@@ -15,19 +15,19 @@ cw_client = boto3.client('cloudwatch')
 
 sftArn = os.getenv('StepFunctionsArn')
 cognitoAdminGroupName = os.getenv('cognitoAdminGroupName')
-minecraftAlarmName = os.getenv('minecraftAlarmName')
-botoSession = boto3.session.Session()
-awsRegion = botoSession.region_name
 
-def response_proxy(data):
+def response_proxy(statusCode, body):
         response = {}
         response["isBase64Encoded"] = False
-        response["statusCode"] = data["statusCode"]
-        response["headers"] = {}
-        if "headers" in data:
-            response["headers"] = data["headers"]
-        response["body"] = json.dumps(data["body"])
-        #logger.info(response)
+        response["statusCode"] = statusCode
+        response["headers"] = {
+            'Content-Type': 'application/json', 
+            'Access-Control-Allow-Origin': '*' 
+        }
+        if not isinstance(body, str):
+            response["body"] = json.dumps(body)
+        else:
+            response["body"] = body
         return response
 
 def getInstanceStatus(instanceId):
@@ -41,30 +41,6 @@ def getInstanceInfo(instanceId):
     return ec2_client.describe_instances(
             InstanceIds=[instanceId]            
         )
-
-def updateAlarm(instanceId):
-    logger.info("updateAlarm: " + instanceId )
-    cw_client.put_metric_alarm(
-        AlarmName=minecraftAlarmName,
-        ActionsEnabled=True,
-        AlarmActions=["arn:aws:automate:" + awsRegion + ":ec2:stop"],
-        InsufficientDataActions=[],
-        MetricName="NetworkOut",
-        Namespace="AWS/EC2",
-        Statistic="Average",
-        Dimensions=[
-            {
-            'Name': 'InstanceId',
-            'Value': instanceId
-            },
-        ],
-        Period=300,
-        EvaluationPeriods=10,
-        DatapointsToAlarm=10,
-        Threshold=20000,
-        TreatMissingData="missing",
-        ComparisonOperator="LessThanOrEqualToThreshold"   
-    )
 
 def belongsToGroup(groups):
     split_groups = groups.split(",")
@@ -92,31 +68,20 @@ def isInstanceReady(instanceId):
         return False
 
 def handler(event, context):
-    proxyRsp={}
-    proxyRsp["headers"] = {
-           'Content-Type': 'application/json', 
-           'Access-Control-Allow-Origin': '*' 
-       }
 
     cognitoGroups = event["requestContext"]["authorizer"]["claims"]["cognito:groups"]
     if not belongsToGroup(cognitoGroups):
-        logger.warning("Not Authorized" )
-        proxyRsp["statusCode"]=401
-        proxyRsp["body"]= {'msg': 'User not authorized to start server'}
-        return response_proxy(proxyRsp)
+        logger.warning("Not Authorized" )        
+        return response_proxy(400,'User not authorized to start server')
 
     try:                 
-        if not 'body' in event:
-            proxyRsp["statusCode"]=500
-            proxyRsp["body"]= {'result': False, 'msg': 'Invalid parameters'}
-            return response_proxy(proxyRsp)
+        if not 'body' in event:            
+            return response_proxy(500,"Invalid parameters")
         else:
             bodyJson = json.loads(event["body"])
 
         if 'instanceId' not in bodyJson:
-            proxyRsp["statusCode"]=500
-            proxyRsp["body"] = { 'msg': 'Missing parameters' }
-            return response_proxy(proxyRsp)
+            return response_proxy(500,'Missing parameters')
 
         bodyJson = json.loads(event["body"])
 
@@ -129,8 +94,6 @@ def handler(event, context):
         now = datetime.now(timezone.utc)
         elapsedTime = (now - launchTime)
 
-        updateAlarm(instanceId)
-
         # Invoking Step-Functions
 
         sfn_rsp = sfn.start_execution(
@@ -138,15 +101,10 @@ def handler(event, context):
                  input='{\"instanceId\" : \"' + instanceId + '\"}' 
           )
 
-        proxyRsp["statusCode"]=200
-        proxyRsp["body"]={'isInstanceReady': isInstanceReady(instanceId), 'state': state, 'elapsedTime': int(elapsedTime.total_seconds()) }
-
-        return response_proxy(proxyRsp)
+        bodyMsg = {'isInstanceReady': isInstanceReady(instanceId), 'state': state, 'elapsedTime': int(elapsedTime.total_seconds()) }
+        return response_proxy(200,bodyMsg)
             
-    except Exception as e:
-        proxyRsp={}
-        proxyRsp["statusCode"]=500
-        proxyRsp["body"] = {'result': False, 'msg': str(e)}
+    except Exception as e:        
         logger.error('Something went wrong: ' + str(e))
-        return response_proxy(proxyRsp)
+        return response_proxy(500,str(e))
             
