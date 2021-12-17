@@ -7,31 +7,7 @@
       {{ errorMsg }}
     </v-alert>
     <v-row class="ma-5">
-      <v-card class="pa-2">
-        <v-card-text>
-          <p class="text-h5 text--primary">
-            Server Start/Stop Events
-          </p>
-          <v-virtual-scroll :items="items" :item-height="90" height="400">
-            <template v-slot:default="{ item }">
-              <v-timeline align-top dense>
-                <v-timeline-item v-if="item.type === 'stop'" color="red" small>
-                      <span class="text-caption"> {{ item.dt }}</span>
-                      <strong>
-                        {{ item.user }}
-                      </strong>
-                </v-timeline-item>
-                <v-timeline-item v-if="item.type === 'start'" color="green" small>
-                      <span class="text-caption"> {{ item.dt }}</span>
-                      <strong>
-                        {{ item.user }}
-                      </strong>
-                </v-timeline-item>
-              </v-timeline>
-            </template>
-          </v-virtual-scroll>
-        </v-card-text>
-      </v-card>
+      
       <v-card class="pa-2">
            <v-row>
             <v-col cols="12">
@@ -45,96 +21,99 @@
               readonly
               ></v-text-field>
 
-              <v-text-field
+              <v-text-field              
               label="Instance Id"
               dense
               :value="instanceName"
               outlined
               readonly
-              ></v-text-field>
-
-              <v-text-field
-              label="Instance Type"
-              dense
-              :value="instanceType"
-              outlined
-              readonly
-              ></v-text-field>
-
-              <v-btn
-                title
-                medium
+              
+              :hint="state"
+              persistent-hint
+              >
+              <v-icon
+                slot="prepend"
+                @click="startServer"
                 v-bind:color="state==='stopped' ? 'error' : state === 'running' && instanceStatus === 'ok' ? 'success' : 'warning'"
-                ><v-icon left>
-                  mdi-power
-                </v-icon>
-                {{ state }}
-              </v-btn>            
-                <v-btn
-                  v-if="state === 'stopped'"
-                  class="p-8"
-                  title
-                  medium                  
-                  @click="startServer"
-                ><v-icon left >restart_alt</v-icon>
-                Start
-                </v-btn>
+              >
+              mdi-power
+              </v-icon>
+              </v-text-field>
 
-            </v-col>
-           </v-row>
-
-          <v-list>
-          <v-list-item two-line>
-            <v-list-item-content>
-            <v-list-item-title class="text-bold">
-              Instance Status
-            </v-list-item-title>
-            <v-list-item-subtitle>
-              <v-icon                
+              <v-card-text>
+                <v-chip
+                  class="mr-2"
+                  outlined
+                >
+                  <v-icon left               
                 :color="classColor(instanceStatus)"
               >
                 mdi-dots-horizontal-circle
               </v-icon> 
-            </v-list-item-subtitle>
-            </v-list-item-content>
-          </v-list-item>
-
-          <v-list-item two-line>
-            <v-list-item-content>
-            <v-list-item-title class="text-bold">
-              System Status
-            </v-list-item-title>
-            <v-list-item-subtitle>
-              <v-icon                
+                  Instance Status
+                </v-chip>
+                <v-chip 
+                  outlined
+                >
+                  <v-icon left              
                 :color="classColor(systemStatus)"
               >
                 mdi-dots-horizontal-circle
-              </v-icon>             
-            </v-list-item-subtitle>
-            </v-list-item-content>
-          </v-list-item>
+              </v-icon>
+                  System Status
+                </v-chip>
+              </v-card-text>
 
-          <v-list-item two-line>
-            <v-list-item-content>
-            <v-list-item-title class="text-bold">
-              Last launch time
-            </v-list-item-title>
-            <v-list-item-subtitle>{{ launchTime }}</v-list-item-subtitle>
-            </v-list-item-content>
-          </v-list-item>
-        </v-list>
-      </v-card>
-      <v-card class="pa-2" width="350">
-          <v-card-text>
-            <div>MONTHLY USAGE TO DATE</div>
-            <p class="text-h4 text--primary">
-              {{ cost.usageQuantity }} hours
-            </p>
-            <p>MONTHLY COST TO DATE</p>
-            <p class="text-h4 text--primary">
-              $ {{ cost.unblendedCost }}
-            </p>
-          </v-card-text>
+            </v-col>
+
+             <v-col
+          cols="12"
+          md="3"
+        >
+
+         <v-text-field
+              label="Instance Type"
+              :value="instanceType"
+              outlined
+              readonly
+              >
+         </v-text-field>
+
+          </v-col>
+
+          <v-col
+          cols="12"
+          md="3"
+        >
+
+         <v-text-field
+              label="Monthly Usage to Date"
+              :value="cost.usageQuantity"
+              suffix="Hours"
+              outlined
+              readonly
+              >
+         </v-text-field>
+
+          </v-col>
+
+         <v-col
+          cols="12"
+          md="3"
+        >
+
+         <v-text-field
+              label="Monthly Cost to Date"
+              :value="cost.unblendedCost"
+              prefix="$"
+              outlined
+              readonly
+              >
+         </v-text-field>
+
+          </v-col>
+           </v-row>
+
           <v-card height="150">
           <vue-frappe v-if="state === 'running' && cpuChartData != null"
             id="cpu"
@@ -146,6 +125,7 @@
             :labels="cpuChartData.labels"
             title="CPU Utilization"
           />
+          
           </v-card>
           <v-divider></v-divider>
           <v-card height="150">
@@ -160,6 +140,18 @@
             title="Network Out"
           />
           </v-card>
+
+          <v-list>
+          <v-list-item two-line>
+            <v-list-item-content>
+            <v-list-item-title class="text-bold">
+              Last launch time
+            </v-list-item-title>
+            <v-list-item-subtitle>{{ launchTime }}</v-list-item-subtitle>
+            </v-list-item-content>
+          </v-list-item>
+        </v-list>
+
       </v-card>
     </v-row>
     <v-dialog
@@ -352,47 +344,53 @@ export default {
           this.copyDialog = true;
     },
     async startServer() {
-      let actionMsg = null
-      try {
-        const currentSession = await Auth.currentSession();
-        const jwt = currentSession.getAccessToken().getJwtToken();
-        const options = {
-          headers: {
-            'Content-Type': 'application/json;charset=utf-8',
-            'Authorization': jwt          
-            }
-        };
-
-        let vm = this;
-        await this.$http.post(this.baseUrl + "start", 
-            { instanceId: this.instanceName }, options).then(() => {
-            this.state = "pending";
-            this.successAlert = true;
-            actionMsg = this.instanceName + " started";
-        }).catch( function (error) {
-        if (error.response) {
-          vm.errorAlert = true;
-          vm.errorMsg = error.response.data.msg
-          actionMsg = error.response.data.msg;
-        } else if (error.request) {
-          // The request was made but no response was received
-          // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
-          // http.ClientRequest in node.js
-          actionMsg = error.request;
-          console.error(error.request);
-        } else {
-          // Something happened in setting up the request that triggered an Error
-          actionMsg = error.message;
-          console.error('Error', error.message);
-        }
-      });
-      } catch (error) {
+      //let actionMsg = null
+      if (this.state !== "stopped") {
         this.errorAlert = false;
-        this.errorMsg = error;
-        console.error(error);
+        this.errorMsg = "Server has to be stopped to be started";
+        return false 
       }
+      console.log("oi")
+      // try {
+      //   const currentSession = await Auth.currentSession();
+      //   const jwt = currentSession.getAccessToken().getJwtToken();
+      //   const options = {
+      //     headers: {
+      //       'Content-Type': 'application/json;charset=utf-8',
+      //       'Authorization': jwt          
+      //       }
+      //   };
 
-      await this.writeLog(actionMsg)
+      //   let vm = this;
+      //   await this.$http.post(this.baseUrl + "start", 
+      //       { instanceId: this.instanceName }, options).then(() => {
+      //       this.state = "pending";
+      //       this.successAlert = true;
+      //       actionMsg = this.instanceName + " started";
+      //   }).catch( function (error) {
+      //   if (error.response) {
+      //     vm.errorAlert = true;
+      //     vm.errorMsg = error.response.data.msg
+      //     actionMsg = error.response.data.msg;
+      //   } else if (error.request) {
+      //     // The request was made but no response was received
+      //     // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
+      //     // http.ClientRequest in node.js
+      //     actionMsg = error.request;
+      //     console.error(error.request);
+      //   } else {
+      //     // Something happened in setting up the request that triggered an Error
+      //     actionMsg = error.message;
+      //     console.error('Error', error.message);
+      //   }
+      // });
+      // } catch (error) {
+      //   this.errorAlert = false;
+      //   this.errorMsg = error;
+      //   console.error(error);
+      // }
+
+      // await this.writeLog(actionMsg)
 
     },
     getChartData(metricName) {

@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-    "Twitter Rekognition Demo - Lambdas \n"
+    "websocket \n"
 Globals:
   Function:
     AutoPublishAlias: live
@@ -66,7 +66,7 @@ Resources:
     DependsOn:
       - OnConnectRoute
       - OnDisconnectRoute
-      - OnHeartbeatRoute
+      - OnServerInfoRoute
     Properties:
       ApiId: !Ref WebSocketApi
   Stage:
@@ -80,34 +80,6 @@ Resources:
       ApiId: !Ref WebSocketApi
       DefaultRouteSettings:
         LoggingLevel: INFO
-
-  # Websocket authorizer with Lambda function
-  # https://github.com/aws-samples/simple-websockets-chat-app/issues/22
-  WebSocketAuthorizer:
-    Type: AWS::ApiGatewayV2::Authorizer
-    Properties:
-      ApiId: !Ref WebSocketApi
-      AuthorizerType: REQUEST
-      Name: WebSocketAuthorizer
-      # https://medium.com/swlh/implementing-secure-web-sockets-with-aws-api-gateway-cognito-dynamodb-and-lambda-b38e02314b42
-      # Web Browser’s WebSocket object does not allow you to send any custom header
-      IdentitySource:
-        - 'route.request.querystring.Authorization'
-      AuthorizerUri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${WebSocketAuthorizerFunction.Arn}/invocations'
-  
-  WebSocketAuthorizerFunction:
-    Type: 'AWS::Serverless::Function'
-    Properties:
-      FunctionName: !Sub '${AWS::StackName}-websocketAuthorizer-function'
-      CodeUri: ./lambdas/websocket/websocketAuthorizer
-      Handler: websocketAuthorizer.handler
-  
-  WebSocketAuthorizerFunctionPermission:
-    Type: 'AWS::Lambda::Permission'
-    Properties:
-      Action: 'lambda:InvokeFunction'
-      FunctionName: !Ref WebSocketAuthorizerFunction
-      Principal: apigateway.amazonaws.com
 
   # WebSocket Connect
   WebSocketOnConnectFunction:
@@ -144,8 +116,6 @@ Resources:
     Properties:
       ApiId: !Ref WebSocketApi
       RouteKey: $connect
-      AuthorizationType: CUSTOM
-      AuthorizerId: !Ref WebSocketAuthorizer
       OperationName: OnConnectRoute
       Target: !Join
         - '/'
@@ -194,12 +164,12 @@ Resources:
         - - 'integrations'
           - !Ref OnDisconnectIntegration
 
-  # WebSocket Heartbeat
-  WebSocketOnHeartbeatFunction:
+  # WebSocket ServerInfo
+  WebSocketOnServerInfoFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
-      CodeUri: ./backend/functions/global/onHeartbeat
-      Handler: onHeartbeat.handler
+      CodeUri: /lambdas/websocket/ServerInfo
+      Handler: index.handler
       Environment:
         Variables:
           connectionTableName: !Ref WebSocketConnectionsTable
@@ -213,31 +183,31 @@ Resources:
               Resource:
                 - !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocketApi}/*'
 
-  OnHeartbeatFunctionResourcePermission:
+  OnServerInfoFunctionResourcePermission:
     Type: 'AWS::Lambda::Permission'
     Properties:
       Action: 'lambda:InvokeFunction'
       Principal: apigateway.amazonaws.com
-      FunctionName: !Ref WebSocketOnHeartbeatFunction
+      FunctionName: !Ref WebSocketOnServerInfoFunction
       SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocketApi}/*'
   
-  OnHeartbeatIntegration:
+  OnServerInfoIntegration:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
       ApiId: !Ref WebSocketApi
-      Description: OnHeartbeat Integration
+      Description: OnServerInfo Integration
       IntegrationType: AWS_PROXY
       IntegrationUri:
-        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${WebSocketOnHeartbeatFunction.Arn}/invocations
+        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${WebSocketOnServerInfoFunction.Arn}/invocations
   
-  OnHeartbeatRoute:
+  OnServerInfoRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref WebSocketApi
-      RouteKey: heartbeat
+      RouteKey: ServerInfo
       # AuthorizationType: NONE
-      OperationName: OnHeartbeatRoute
+      OperationName: OnServerInfoRoute
       Target: !Join
         - '/'
         - - 'integrations'
-          - !Ref OnHeartbeatIntegration
+          - !Ref OnServerInfoIntegration
