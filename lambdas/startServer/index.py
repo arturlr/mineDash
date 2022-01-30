@@ -11,7 +11,6 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 ec2_client = boto3.client('ec2')
-ssm = boto3.client('ssm')
 
 aplicationName = os.getenv('aplicationName')
 

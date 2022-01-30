@@ -6,5 +6,16 @@ type loginAudit @model
   id: ID!
   email: AWSEmail!
   action: String!
-  timestamp: AWSDateTime!
+  expirationEpoch: AWSTimestamp
+}
+
+type ec2Events @model 
+@auth(rules: [
+  { allow:  private, provider: iam }, 
+  { allow:  private, provider: userPools }
+]){
+  id: ID!
+  instanceId: AWSEmail!
+  json: AWSJSON!
+  expirationEpoch: AWSTimestamp
 }

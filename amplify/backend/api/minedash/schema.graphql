@@ -8,3 +8,19 @@ type loginAudit @model
   action: String!
   expirationEpoch: AWSTimestamp
 }
+
+type ec2Events @model 
+@auth(rules: [
+  { allow:  private, provider: iam }, 
+  { allow:  private, provider: userPools }
+]){
+  id: ID!
+  instanceId: AWSEmail!
+  json: AWSJSON!
+  expirationEpoch: AWSTimestamp
+}
+
+type Subscription {
+  onEc2ByInstance(name: String!): ec2Events
+    @aws_subscribe(mutations: ["createEc2Events"])
+}

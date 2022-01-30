@@ -46,3 +46,48 @@ export const deleteLoginAudit = /* GraphQL */ `
     }
   }
 `;
+export const createEc2Events = /* GraphQL */ `
+  mutation CreateEc2Events(
+    $input: CreateEc2EventsInput!
+    $condition: ModelEc2EventsConditionInput
+  ) {
+    createEc2Events(input: $input, condition: $condition) {
+      id
+      instanceId
+      json
+      expirationEpoch
+      createdAt
+      updatedAt
+    }
+  }
+`;
+export const updateEc2Events = /* GraphQL */ `
+  mutation UpdateEc2Events(
+    $input: UpdateEc2EventsInput!
+    $condition: ModelEc2EventsConditionInput
+  ) {
+    updateEc2Events(input: $input, condition: $condition) {
+      id
+      instanceId
+      json
+      expirationEpoch
+      createdAt
+      updatedAt
+    }
+  }
+`;
+export const deleteEc2Events = /* GraphQL */ `
+  mutation DeleteEc2Events(
+    $input: DeleteEc2EventsInput!
+    $condition: ModelEc2EventsConditionInput
+  ) {
+    deleteEc2Events(input: $input, condition: $condition) {
+      id
+      instanceId
+      json
+      expirationEpoch
+      createdAt
+      updatedAt
+    }
+  }
+`;

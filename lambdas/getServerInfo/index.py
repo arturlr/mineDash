@@ -13,7 +13,6 @@ logger.setLevel(logging.INFO)
 ec2_client = boto3.client('ec2')
 cw_client = boto3.client('cloudwatch')
 ct_client = boto3.client('cloudtrail')
-ssm = boto3.client('ssm')
 sfn = boto3.client('stepfunctions')
 ce_client = boto3.client('ce')
 ENCODING = 'utf-8'
@@ -24,16 +23,11 @@ appValue = os.getenv('appValue')
 
 filters = [{"Name":"tag:App", "Values":[ appValue ]}]
 
-def response_proxy(data):
-        response = {}
-        response["isBase64Encoded"] = False
-        response["statusCode"] = data["statusCode"]
-        response["headers"] = {}
-        if "headers" in data:
-            response["headers"] = data["headers"]
-        response["body"] = json.dumps(data["body"])
-        #logger.info(response)
-        return response
+def _response_proxy(status_code, body, headers={}):
+    if bool(headers): # Return True if dictionary is not empty
+        return {"statusCode": status_code, "body": json.dumps(body), "headers": headers}
+    else:
+        return {"statusCode": status_code, "body": json.dumps(body)}
 
 def getUsageCost(instanceId):
     first_day_of_the_month=date.today().replace(day=1)
@@ -57,7 +51,7 @@ def getUsageCost(instanceId):
                     },
                     {
                         "Tags": {
-                            "Key": "group",
+                            "Key": "App",
                             "Values": [ appValue
                             ]
                         }
@@ -72,10 +66,10 @@ def getUsageCost(instanceId):
         }
     response = ce_client.get_cost_and_usage(**request)
     for results in response['ResultsByTime']:  
-        unblendedCost = results['Total']['UnblendedCost']['Amount'] 
-        usageQuantity = results['Total']['UsageQuantity']['Amount']
+        unblendedCost = float(results['Total']['UnblendedCost']['Amount'])
+        usageQuantity = float(results['Total']['UsageQuantity']['Amount'])
 
-    return { "unblendedCost": unblendedCost, "usageQuantity": usageQuantity }
+    return { "unblendedCost": round(unblendedCost,1), "usageQuantity": round(usageQuantity,1) }
 
 def getMetricData(instanceId,metricName,unit,statType):
     cdata = []
@@ -149,18 +143,15 @@ def getInstanceDetails(InstanceId):
 
 
 def handler(event, context):
-    proxyRsp={}
-    proxyRsp["headers"] = {
+    headers = {
            'Content-Type': 'application/json', 
-           'Access-Control-Allow-Origin': '*' 
-       }
+           'Access-Control-Allow-Origin': '*' }
     try:   
         instanceInfo = getInstanceInfo()
         
         if (len(instanceInfo["Reservations"])) == 0:
-            proxyRsp["statusCode"]=500
-            proxyRsp["body"]= { 'result': False, 'msg': "No Instances Found" }
-            return response_proxy(proxyRsp)
+            resp = { 'result': False, 'msg': "No Instances Found" }
+            return _response_proxy(500, resp, headers)
             
         instanceName = instanceInfo["Reservations"][0]["Instances"][0]["InstanceId"]
         instanceType = instanceInfo["Reservations"][0]["Instances"][0]["InstanceType"]
@@ -191,14 +182,9 @@ def handler(event, context):
         stopEvents = getCloudTailEvents(instanceName, "StopInstances")
         payload["timeLine"] = sorted(startEvents + stopEvents, reverse = True)
 
-        proxyRsp["statusCode"]=200
-        proxyRsp["body"]=payload
-
-        return response_proxy(proxyRsp)
+        return _response_proxy(200,payload)
             
     except Exception as e:
-        proxyRsp={}
-        proxyRsp["statusCode"]=500
-        proxyRsp["body"] = {'result': False, 'msg': str(e)}
+        resp = {'result': False, 'msg': str(e)}
         logger.error('Something went wrong: ' + str(e))
-        return response_proxy(proxyRsp)
+        return _response_proxy(500,resp)

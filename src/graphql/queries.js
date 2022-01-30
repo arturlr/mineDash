@@ -32,3 +32,34 @@ export const listLoginAudits = /* GraphQL */ `
     }
   }
 `;
+export const getEc2Events = /* GraphQL */ `
+  query GetEc2Events($id: ID!) {
+    getEc2Events(id: $id) {
+      id
+      instanceId
+      json
+      expirationEpoch
+      createdAt
+      updatedAt
+    }
+  }
+`;
+export const listEc2Events = /* GraphQL */ `
+  query ListEc2Events(
+    $filter: ModelEc2EventsFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    listEc2Events(filter: $filter, limit: $limit, nextToken: $nextToken) {
+      items {
+        id
+        instanceId
+        json
+        expirationEpoch
+        createdAt
+        updatedAt
+      }
+      nextToken
+    }
+  }
+`;

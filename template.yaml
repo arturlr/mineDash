@@ -34,7 +34,7 @@ Globals:
     Tracing: Active
 
 Resources:
-  RunMinecraftDocument:
+  MinecraftDocument:
     Type: AWS::SSM::Document
     Properties:
       Content:
@@ -43,22 +43,21 @@ Resources:
         parameters:
           xmsG:
             type: String
-            description: 'initial memory size in Gigabyte (default 1)'
-            default: "1"
+            description: 'initial memory size in Gigabyte (default 3)'
+            default: "3"
             allowedPattern: "^[0-9]*$"
           xmxG:
             type: String
-            description: 'Total memory allowed to be used in Gigabyte (default 1)'
-            default: "1"
+            description: 'Total memory allowed to be used in Gigabyte (default 3)'
+            default: "3"
             allowedPattern: "^[0-9]*$"
         mainSteps:
           - action: aws:runShellScript
             name: runCommands
             inputs:
               runCommand:
-                - 'cd /opt/minecraft/server'
-                - 'sudo -u minecraft java -Xmx{{xmxG}}G -Xms{{xmsG}}G -jar server.jar nogui &'                
-                - 'echo "Run Minecraft Successful"'
+                - 'cd /home/ubuntu/server'
+                - 'sudo screen -d -m java -Xmx{{xmxG}}G -Xms{{xmsG}}G -jar server.jar nogui &'
       DocumentType: Command
 
   GetServerInfoProxyResource:
@@ -296,6 +295,7 @@ Resources:
       Environment:
         Variables:
           aplicationName: !Ref ProjectName
+          minecraftDocument: !Ref MinecraftDocument
 
   minecraftAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -454,6 +454,149 @@ Resources:
                   - logs:DescribeResourcePolicies
                   - logs:DescribeLogGroups
                 Resource: "*"
+
+  WebSocketConnectionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: connectionId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: connectionId
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: expiration
+        Enabled: true
+
+  PythonJoseLayer:
+      Type: AWS::Serverless::LayerVersion
+      Properties:
+        Description: PyDicom
+        ContentUri: ./layers/python-jose/python-jose.zip
+        CompatibleRuntimes:
+          - python3.8
+          - python3.7
+        RetentionPolicy: Delete
+
+# Websocket API - heavily inspired from https://serverlessland.com/patterns/apigw-websocket-api-lambda
+  WebSocketApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub '${ProjectName}-websocket-api'
+      ProtocolType: WEBSOCKET
+      RouteSelectionExpression: '$request.body.route'
+  # https://currentlyunnamed-theclassic.blogspot.com/2018/12/mastering-cloudformation-for-api.html
+  WebSocketDeployment:
+    Type: AWS::ApiGatewayV2::Deployment
+    DependsOn:
+      - OnConnectRoute
+      - OnDisconnectRoute
+    Properties:
+      ApiId: !Ref WebSocketApi
+  Stage:
+    Type: AWS::ApiGatewayV2::Stage
+    DependsOn:
+      - ApiGatewayAccountSettings
+    Properties:
+      StageName: v1
+      Description: Dev Stage
+      DeploymentId: !Ref WebSocketDeployment
+      ApiId: !Ref WebSocketApi
+      AccessLogSettings:
+        DestinationArn: !GetAtt WebSocketApiAccessLogGroup.Arn
+        Format: "{ 'requestId':'$context.requestId', 'ip': '$context.identity.sourceIp', 'caller':'$context.identity.caller', 'user':'$context.identity.user','requestTime':'$context.requestTime', 'httpMethod':'$context.httpMethod','resourcePath':'$context.resourcePath', 'status':'$context.status','protocol':'$context.protocol', 'responseLength':'$context.responseLength' }"
+      DefaultRouteSettings:
+        LoggingLevel: INFO
+  WebSocketApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 30
+
+  # WebSocket Connect
+  WebSocketOnConnectFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-onConnect-function'
+      CodeUri: ./lambdas/websocket/connectionManager
+      Layers:
+      - !Ref PythonJoseLayer
+      Environment:
+        Variables:
+          connectionTableName: !Ref WebSocketConnectionsTable
+          aplicationName: !Ref ProjectName
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref WebSocketConnectionsTable
+  OnConnectFunctionResourcePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Ref WebSocketOnConnectFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocketApi}/*'
+  OnConnectIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref WebSocketApi
+      Description: OnConnect Integration
+      IntegrationType: AWS_PROXY
+      IntegrationUri:
+        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${WebSocketOnConnectFunction.Arn}/invocations
+  OnConnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref WebSocketApi
+      RouteKey: $connect
+      AuthorizationType: CUSTOM
+      AuthorizerId: !Ref WebSocketAuthorizer
+      OperationName: OnConnectRoute
+      Target: !Join
+        - '/'
+        - - 'integrations'
+          - !Ref OnConnectIntegration
+
+  # WebSocket Disconnect
+  WebSocketOnDisconnectFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-onDisconnect-function'
+      CodeUri: ./lambdas/websocket/connectionManager
+      Layers:
+      - !Ref PythonJoseLayer
+      Environment:
+        Variables:
+          connectionTableName: !Ref WebSocketConnectionsTable
+          aplicationName: !Ref ProjectName
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref WebSocketConnectionsTable
+  OnDisconnectFunctionResourcePermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      Principal: apigateway.amazonaws.com
+      FunctionName: !Ref WebSocketOnDisconnectFunction
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocketApi}/*'
+  OnDisconnectIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref WebSocketApi
+      Description: OnDisconnect Integration
+      IntegrationType: AWS_PROXY
+      IntegrationUri:
+        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${WebSocketOnDisconnectFunction.Arn}/invocations
+  OnDisconnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref WebSocketApi
+      RouteKey: $disconnect
+      # AuthorizationType: NONE
+      OperationName: OnDisconnectRoute
+      Target: !Join
+        - '/'
+        - - 'integrations'
+          - !Ref OnDisconnectIntegration
 
 Outputs:
   StateMachineArn:

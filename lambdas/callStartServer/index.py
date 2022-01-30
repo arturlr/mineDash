@@ -19,16 +19,11 @@ minecraftAlarmName = os.getenv('minecraftAlarmName')
 botoSession = boto3.session.Session()
 awsRegion = botoSession.region_name
 
-def response_proxy(data):
-        response = {}
-        response["isBase64Encoded"] = False
-        response["statusCode"] = data["statusCode"]
-        response["headers"] = {}
-        if "headers" in data:
-            response["headers"] = data["headers"]
-        response["body"] = json.dumps(data["body"])
-        #logger.info(response)
-        return response
+def _response_proxy(status_code, body, headers={}):
+    if bool(headers): # Return True if dictionary is not empty
+        return {"statusCode": status_code, "body": json.dumps(body), "headers": headers}
+    else:
+        return {"statusCode": status_code, "body": json.dumps(body)}
 
 def getInstanceStatus(instanceId):
     logger.info("getInstanceStatus: " + instanceId )
@@ -101,22 +96,19 @@ def handler(event, context):
     cognitoGroups = event["requestContext"]["authorizer"]["claims"]["cognito:groups"]
     if not belongsToGroup(cognitoGroups):
         logger.warning("Not Authorized" )
-        proxyRsp["statusCode"]=401
-        proxyRsp["body"]= {'msg': 'User not authorized to start server'}
-        return response_proxy(proxyRsp)
+        resp = {'msg': 'User not authorized to start server'}
+        return _response_proxy(401,resp)
 
     try:                 
         if not 'body' in event:
-            proxyRsp["statusCode"]=500
-            proxyRsp["body"]= {'result': False, 'msg': 'Invalid parameters'}
-            return response_proxy(proxyRsp)
+            resp = {'result': False, 'msg': 'Invalid parameters'}
+            return _response_proxy(500,resp)
         else:
             bodyJson = json.loads(event["body"])
 
         if 'instanceId' not in bodyJson:
-            proxyRsp["statusCode"]=500
-            proxyRsp["body"] = { 'msg': 'Missing parameters' }
-            return response_proxy(proxyRsp)
+            resp = { 'msg': 'Missing parameters' }
+            return _response_proxy(500,resp)
 
         bodyJson = json.loads(event["body"])
 
@@ -138,15 +130,12 @@ def handler(event, context):
                  input='{\"instanceId\" : \"' + instanceId + '\"}' 
           )
 
-        proxyRsp["statusCode"]=200
-        proxyRsp["body"]={'isInstanceReady': isInstanceReady(instanceId), 'state': state, 'elapsedTime': int(elapsedTime.total_seconds()) }
+        resp ={'isInstanceReady': isInstanceReady(instanceId), 'state': state, 'elapsedTime': int(elapsedTime.total_seconds()) }
 
-        return response_proxy(proxyRsp)
+        return _response_proxy(200,resp)
             
     except Exception as e:
-        proxyRsp={}
-        proxyRsp["statusCode"]=500
-        proxyRsp["body"] = {'result': False, 'msg': str(e)}
+        resp = {'result': False, 'msg': str(e)}
         logger.error('Something went wrong: ' + str(e))
-        return response_proxy(proxyRsp)
+        return _response_proxy(500,resp)
             

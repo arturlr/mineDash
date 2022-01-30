@@ -12,12 +12,14 @@ logger.setLevel(logging.INFO)
 ec2_client = boto3.client('ec2')
 ssm = boto3.client('ssm')
 
+minecraftDocumentName = os.getenv('minecraftDocument')
+
 def handler(event, context):
     try:   
         
         ssm_rsp = ssm.send_command(
             InstanceIds=[event["instanceId"]],
-            DocumentName="minecraftStart"
+            DocumentName=minecraftDocumentName
         )
         
         logger.info(ssm_rsp)
