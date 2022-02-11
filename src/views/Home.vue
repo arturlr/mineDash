@@ -6,154 +6,194 @@
     <v-alert type="error" v-model="errorAlert" dismissible>
       {{ errorMsg }}
     </v-alert>
-    <v-row class="ma-5">
+
+<v-container fluid>
+   <v-row>
+     <v-col cols="4">
       
       <v-card class="pa-2">
-           <v-row>
+        <v-list-item>
+          <v-list-item-content>
+            <div class="text-overline mb-4">
+              HOSTNAME
+            </div>
+          </v-list-item-content>
+        </v-list-item>
+        <v-spacer></v-spacer>
+        <v-row>
             <v-col cols="12">
-              <v-text-field
+               <v-text-field
               id="publicIp"
+              dense
               label="Public IP"
               :value="publicIp"
-              prepend-icon="content_copy"
-              @click:prepend="copyPublicIp"
-              outlined
-              readonly
-              ></v-text-field>
-
-              <v-text-field              
-              label="Instance Id"
-              dense
-              :value="instanceName"
-              outlined
-              readonly
-              
+              append-icon="content_copy"
+              @click:append="copyPublicIp"
               :hint="state"
               persistent-hint
+              outlined
+              readonly
               >
-              <v-icon
+               <v-icon
+                large
                 slot="prepend"
                 @click="startServer"
                 v-bind:color="state==='stopped' ? 'error' : state === 'running' && instanceStatus === 'ok' ? 'success' : 'warning'"
               >
               mdi-power
               </v-icon>
-              </v-text-field>
+              <template v-slot:append-outer>
+                  <v-progress-circular
+                    v-if="state === 'running' && instanceStatus !== 'ok' && systemStatus !='ok'"
+                    size="24"
+                    color="info"
+                    indeterminate
+                  ></v-progress-circular>
+              </template>
+              </v-text-field>  
 
-              <v-card-text>
-                <v-chip
-                  class="mr-2"
-                  outlined
-                >
-                  <v-icon left               
-                :color="classColor(instanceStatus)"
+              <v-chip
+                class="ma-2"
+                color="gray"
+                label
+                outlined
               >
-                mdi-dots-horizontal-circle
-              </v-icon> 
-                  Instance Status
-                </v-chip>
-                <v-chip 
-                  outlined
-                >
-                  <v-icon left              
-                :color="classColor(systemStatus)"
+                <v-icon left>             
+                  developer_board
+                </v-icon>
+                2 vCPU
+              </v-chip>
+
+              <v-chip
+                class="ma-2"
+                color="gray"
+                label
+                outlined
               >
-                mdi-dots-horizontal-circle
-              </v-icon>
-                  System Status
-                </v-chip>
-              </v-card-text>
+                <v-icon left>             
+                  sd_card
+                </v-icon>
+                4 GB
+              </v-chip>
+
+              <v-chip
+                class="ma-2"
+                color="gray"
+                label
+                outlined
+              >
+                <v-icon left>             
+                  album
+                </v-icon>
+                50 GB
+              </v-chip>  
+
+              <v-divider></v-divider>          
+  
+              <v-chip
+                class="ma-2"
+                color="primary"
+                label
+                outlined
+              >
+                <v-icon left>             
+                  attach_money
+                </v-icon>
+                {{ cost.unblendedCost }}
+              </v-chip>
+
+              <v-chip
+                class="ma-2"
+                color="primary"
+                label
+                outlined
+              >
+              <v-icon left>
+                  schedule
+                </v-icon>
+                {{ cost.usageQuantity }} hours
+              </v-chip>
+
+              <v-chip
+                class="ma-2"
+                color="primary"
+                label
+                outlined
+              >
+              <v-icon left>
+                  group
+                </v-icon>
+                0
+              </v-chip>
+             
+            </v-col>
+        </v-row>
+
+        <v-row>
+            <v-col cols="12">
+              <v-card>
+              <v-list class="transparent">
+                
+                <v-list-item two-line>
+                  <v-list-item-content>
+                    <v-list-item-title class="text-h7 font-weight-light">
+                      CPU - Last 4 hours
+                    </v-list-item-title>
+                    <v-list-item-subtitle>
+                      <apexchart ref="cpuUtilization" height="45" 
+                          :options="sparklineOptions" :series="chartInit"></apexchart>
+                    </v-list-item-subtitle>
+                  </v-list-item-content>
+                </v-list-item>
+
+                <v-list-item two-line>
+                  <v-list-item-content>
+                    <v-list-item-title class="text-h7 font-weight-light">
+                      Network - Last 4 hours
+                    </v-list-item-title>
+                    <v-list-item-subtitle>
+                      <apexchart ref="networkOut"  height="45" 
+                          :options="sparklineOptions" :series="chartInit"></apexchart>
+                    </v-list-item-subtitle>
+                  </v-list-item-content>
+                </v-list-item>
+
+                <v-list-item two-line>
+                  <v-list-item-content>
+                    <v-list-item-title class="text-h7 font-weight-light">
+                      Last 15 days usage (min)
+                    </v-list-item-title>
+                    <v-list-item-subtitle>
+                      <apexchart ref="usage"  height="45" 
+                          :options="barOptions" :series="chartInit"></apexchart>
+                    </v-list-item-subtitle>
+                  </v-list-item-content>
+                </v-list-item>
+              </v-list>
+
+              </v-card>
 
             </v-col>
 
-             <v-col
-          cols="12"
-          md="3"
-        >
-
-         <v-text-field
-              label="Instance Type"
-              :value="instanceType"
-              outlined
-              readonly
-              >
-         </v-text-field>
-
-          </v-col>
-
-          <v-col
-          cols="12"
-          md="3"
-        >
-
-         <v-text-field
-              label="Monthly Usage to Date"
-              :value="cost.usageQuantity"
-              suffix="Hours"
-              outlined
-              readonly
-              >
-         </v-text-field>
-
-          </v-col>
-
-         <v-col
-          cols="12"
-          md="3"
-        >
-
-         <v-text-field
-              label="Monthly Cost to Date"
-              :value="cost.unblendedCost"
-              prefix="$"
-              outlined
-              readonly
-              >
-         </v-text-field>
-
-          </v-col>
            </v-row>
-
-          <v-card height="150">
-          <vue-frappe v-if="state === 'running' && cpuChartData != null"
-            id="cpu"
-            :key="timeEpoch"
-            type="line"
-            :height="150"
-            :lineOptions="{regionFill: 1}"
-            :dataSets="cpuChartData.data"
-            :labels="cpuChartData.labels"
-            title="CPU Utilization"
-          />
-          
-          </v-card>
-          <v-divider></v-divider>
-          <v-card height="150">
-          <vue-frappe v-if="state === 'running' && networkOutChartData != null"
-            id="network"
-            :key="timeEpoch"
-            type="line"
-            :height="150"
-            :lineOptions="{regionFill: 1}"
-            :dataSets="networkOutChartData.data"
-            :labels="networkOutChartData.labels"
-            title="Network Out"
-          />
-          </v-card>
 
           <v-list>
           <v-list-item two-line>
             <v-list-item-content>
-            <v-list-item-title class="text-bold">
+            <v-list-item-title class="font-weight-light">
               Last launch time
             </v-list-item-title>
-            <v-list-item-subtitle>{{ launchTime }}</v-list-item-subtitle>
+            <v-list-item-subtitle class="font-weight-light">{{ launchTime }}</v-list-item-subtitle>
             </v-list-item-content>
           </v-list-item>
         </v-list>
 
       </v-card>
+     </v-col>
     </v-row>
+
+</v-container>
+
     <v-dialog
       v-model="copyDialog"
       hide-overlay
@@ -182,19 +222,20 @@
           </v-btn>
         </v-card-actions>
       </v-card>
-    </v-dialog>
+    </v-dialog>    
   </div>
 </template>
 
 <script>
-import { VueFrappe } from 'vue2-frappe'
 import { Auth } from "aws-amplify";
 import { mapGetters } from "vuex";
+import VueApexCharts from "vue-apexcharts";
+//import moment from "moment";
 
 export default {
   name: "App",
   components: {
-    VueFrappe,
+    apexchart: VueApexCharts,
   },
   data() {
     return {
@@ -213,13 +254,70 @@ export default {
       timeEpoch: null,
       items: [],
       timeStamp: null,
-      cpuChartData: null,
-      networkOutChartData: null,
       statusCode: 200,
       errorAlert: false,
       errorMsg: null,
       successAlert: false,
-      copyDialog: false
+      copyDialog: false,
+      sparklineOptions: {
+        chart: {
+          type: 'line',
+          sparkline: {
+            enabled: true
+          }
+        },
+        tooltip: {
+          fixed: {
+            enabled: false
+          },
+          x: {
+            show: false
+          },
+          y: {
+            
+          },
+          marker: {
+            show: false
+          }
+        }
+      },
+      barOptions: {
+        chart: {
+          type: 'bar',
+          sparkline: {
+            enabled: true
+          }
+        },
+        plotOptions: {
+          bar: {
+            columnWidth: '80%'
+          }
+        },
+        labels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,12,14,15],
+        xaxis: {
+          crosshairs: {
+            width: 1
+          },
+        },
+        tooltip: {
+          fixed: {
+            enabled: false
+          },
+          x: {
+            show: false
+          },
+          y: {
+            
+          },
+          marker: {
+            show: false
+          }
+        }
+
+      },
+      chartInit: [{
+        data: []
+      }],
     };
   },
 
@@ -264,8 +362,8 @@ export default {
         }
         });
         this.timeEpoch = Date.now();        
-        this.networkOutChartData = this.getChartData("networkOut");
-        this.cpuChartData = this.getChartData("cpuUtilization");        
+        this.getChartData("networkOut");
+        this.getChartData("cpuUtilization");        
         actionMsg = "load page"
 
       }).catch( function (error) {
@@ -327,8 +425,8 @@ export default {
     setShow() {
       setTimeout(() => {
         this.timeEpoch = Date.now();
-        this.networkOutChartData = this.getChartData("networkOut");
-        this.cpuChartData = this.getChartData("cpuUtilization");
+        this.getChartData("networkOut");
+        this.getChartData("cpuUtilization");
       }, 300.0*1000);
     },
     copyPublicIp () {
@@ -393,21 +491,14 @@ export default {
 
     },
     getChartData(metricName) {
-      let labels = [];
-      let datasetData = [];
-
+      
       if (this.metrics[metricName] && this.metrics[metricName].length != 0) {
-        this.metrics[metricName].forEach((element) => {
-          labels.push(element["label"]);
-          datasetData.push(element["value"]);
-        });
-      }
-
-      return {
-          labels: labels,
-          data: [{
-            values: datasetData 
-          }]          
+          this.$refs.metricName.updateSeries([
+          {
+            name: metricName,
+            data: this.metrics[metricName]
+          }
+        ])
       }
     } // function 
   } // methods

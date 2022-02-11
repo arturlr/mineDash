@@ -95,9 +95,9 @@ def getMetricData(instanceId,metricName,unit,statType):
         return None
     else:
         for rec in rsp["Datapoints"]:
-            cdata.append({'value': round(rec["Average"], 2), 'label': rec["Timestamp"].strftime("%H:%M"), 'timeStamp': rec["Timestamp"].strftime("%Y/%m/%dT%H:%M:%S")})
+            cdata.append({'x': round(rec["Average"], 2), 'y': rec["Timestamp"].strftime("%Y/%m/%dT%H:%M:%S")})
             
-        return sorted(cdata, key=lambda k: k['timeStamp'])
+        return sorted(cdata, key=lambda k: k['y'])
 
 def getInstanceInfo():
     return ec2_client.describe_instances(

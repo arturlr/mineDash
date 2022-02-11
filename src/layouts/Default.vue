@@ -1,26 +1,54 @@
 <template>
   <div>
-    <v-app-bar color="black" dense dark fixed app>
-      <v-toolbar-title>MineDash</v-toolbar-title>
-      <v-spacer></v-spacer>
-      <span class="yellow--text">{{ email }}</span>
-      <v-tooltip bottom>
+    <v-toolbar 
+      dark 
+      height="100px"
+      >
+      <v-spacer />
+      <v-toolbar-title class="text-h5 font-weight">MineDash</v-toolbar-title>
+      <v-spacer />
+
+      <v-menu
+      v-model="menu"
+      :close-on-content-click="false"
+      :nudge-width="200"
+      offset-y
+    >
       <template v-slot:activator="{ on, attrs }">
-        <v-btn 
-          icon 
-          color="yellow" 
-          @click="signOut"
+        <v-btn
           v-bind="attrs"
           v-on="on"
         >
-        <v-icon>mdi-export</v-icon>
-      </v-btn>
+          <v-icon large>
+            assignment_ind
+          </v-icon>
+        </v-btn>
       </template>
-      <span>Sing Out</span>
-    </v-tooltip>
 
-      
-    </v-app-bar>
+      <v-card dark>
+        <v-list>
+          <v-list-item>
+            <v-list-item-content>
+              <v-list-item-title>{{ email }}</v-list-item-title>
+            </v-list-item-content>
+            <v-list-item-action>
+              <v-btn 
+                icon 
+                color="yellow" 
+                @click="signOut"
+                v-bind="attrs"
+                v-on="on"
+              >
+              <v-icon>mdi-export</v-icon>
+            </v-btn>
+            </v-list-item-action>
+          </v-list-item>
+        </v-list>
+      </v-card>
+      </v-menu>
+    </v-toolbar>
+
+
     <v-main>
       <v-container>
         <router-view></router-view>
