@@ -77,7 +77,7 @@
     ],
     "userPoolGroups": true,
     "adminQueries": true,
-    "oAuthMetadata": "{\"AllowedOAuthFlows\":[\"code\"],\"AllowedOAuthScopes\":[\"email\",\"openid\",\"profile\"],\"CallbackURLs\":[\"http://localhost:8080/\",\"https://minedash.geckobyte.ca/\",\"http://localhost:8080/\"],\"LogoutURLs\":[\"http://localhost:8080/\",\"https://minedash.geckobyte.ca/\"]}",
+    "oAuthMetadata": "{\"AllowedOAuthFlows\":[\"code\"],\"AllowedOAuthScopes\":[\"email\",\"openid\",\"profile\"],\"CallbackURLs\":[\"http://localhost:8080/\",\"https://minedash.geckobyte.ca/\"],\"LogoutURLs\":[\"http://localhost:8080/\"]}",
     "adminQueryGroup": "admin"
   }
 }
