@@ -36,13 +36,13 @@
     "sharedId": "438869b0",
     "resourceName": "minedash438869b0",
     "authSelections": "identityPoolAndUserPool",
-    "useDefault": "defaultSocial",
+    "useDefault": "manual",
     "hostedUI": true,
     "usernameAttributes": [
       "email"
     ],
     "triggers": {},
-    "hostedUIDomainName": "minedash438869b0-438869b0",
+    "hostedUIDomainName": "minedev",
     "authProvidersUserPool": [
       "Google"
     ],
@@ -67,11 +67,17 @@
     },
     "breakCircularDependency": true,
     "dependsOn": [],
-    "hostedUIProviderCreds": "[]",
-    "oAuthMetadata": "{\"AllowedOAuthFlows\":[\"code\"],\"AllowedOAuthScopes\":[\"phone\",\"email\",\"openid\",\"profile\",\"aws.cognito.signin.user.admin\"],\"CallbackURLs\":[\"http://localhost:8080/\",\"https://minedash.geckobyte.ca/\"],\"LogoutURLs\":[\"http://localhost:8080/\",\"https://minedash.geckobyte.ca/\"]}",
     "parentStack": {
       "Ref": "AWS::StackId"
     },
-    "permissions": []
+    "permissions": [],
+    "thirdPartyAuth": true,
+    "authProviders": [
+      "accounts.google.com"
+    ],
+    "userPoolGroups": true,
+    "adminQueries": true,
+    "oAuthMetadata": "{\"AllowedOAuthFlows\":[\"code\"],\"AllowedOAuthScopes\":[\"email\",\"openid\",\"profile\"],\"CallbackURLs\":[\"http://localhost:8080/\",\"https://minedash.geckobyte.ca/\",\"http://localhost:8080/\"],\"LogoutURLs\":[\"http://localhost:8080/\",\"https://minedash.geckobyte.ca/\"]}",
+    "adminQueryGroup": "admin"
   }
 }
