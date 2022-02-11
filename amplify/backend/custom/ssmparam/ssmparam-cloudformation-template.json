@@ -5,53 +5,52 @@
       "Type": "String"
     },
     "ProjectName": {
-      "Default": "mineDash",
       "Type": "String",
-      "Description": "A description to identify project"
+      "Default": "geckocraft"
     },
-    "authminedash438869b0IdentityPoolId": {
+    "authgeckocraft32bfb799IdentityPoolId": {
       "Type": "String",
-      "Description": "Input parameter describing IdentityPoolId attribute for auth/minedash438869b0 resource"
+      "Description": "Input parameter describing IdentityPoolId attribute for auth/geckocraft32bfb799 resource"
     },
-    "authminedash438869b0IdentityPoolName": {
+    "authgeckocraft32bfb799IdentityPoolName": {
       "Type": "String",
-      "Description": "Input parameter describing IdentityPoolName attribute for auth/minedash438869b0 resource"
+      "Description": "Input parameter describing IdentityPoolName attribute for auth/geckocraft32bfb799 resource"
     },
-    "authminedash438869b0HostedUIDomain": {
+    "authgeckocraft32bfb799HostedUIDomain": {
       "Type": "String",
-      "Description": "Input parameter describing HostedUIDomain attribute for auth/minedash438869b0 resource"
+      "Description": "Input parameter describing HostedUIDomain attribute for auth/geckocraft32bfb799 resource"
     },
-    "authminedash438869b0OAuthMetadata": {
+    "authgeckocraft32bfb799OAuthMetadata": {
       "Type": "String",
-      "Description": "Input parameter describing OAuthMetadata attribute for auth/minedash438869b0 resource"
+      "Description": "Input parameter describing OAuthMetadata attribute for auth/geckocraft32bfb799 resource"
     },
-    "authminedash438869b0UserPoolId": {
+    "authgeckocraft32bfb799UserPoolId": {
       "Type": "String",
-      "Description": "Input parameter describing UserPoolId attribute for auth/minedash438869b0 resource"
+      "Description": "Input parameter describing UserPoolId attribute for auth/geckocraft32bfb799 resource"
     },
-    "authminedash438869b0UserPoolArn": {
+    "authgeckocraft32bfb799UserPoolArn": {
       "Type": "String",
-      "Description": "Input parameter describing UserPoolArn attribute for auth/minedash438869b0 resource"
+      "Description": "Input parameter describing UserPoolArn attribute for auth/geckocraft32bfb799 resource"
     },
-    "authminedash438869b0UserPoolName": {
+    "authgeckocraft32bfb799UserPoolName": {
       "Type": "String",
-      "Description": "Input parameter describing UserPoolName attribute for auth/minedash438869b0 resource"
+      "Description": "Input parameter describing UserPoolName attribute for auth/geckocraft32bfb799 resource"
     },
-    "authminedash438869b0AppClientIDWeb": {
+    "authgeckocraft32bfb799AppClientIDWeb": {
       "Type": "String",
-      "Description": "Input parameter describing AppClientIDWeb attribute for auth/minedash438869b0 resource"
+      "Description": "Input parameter describing AppClientIDWeb attribute for auth/geckocraft32bfb799 resource"
     },
-    "authminedash438869b0AppClientID": {
+    "authgeckocraft32bfb799AppClientID": {
       "Type": "String",
-      "Description": "Input parameter describing AppClientID attribute for auth/minedash438869b0 resource"
+      "Description": "Input parameter describing AppClientID attribute for auth/geckocraft32bfb799 resource"
     },
-    "apiminedashGraphQLAPIIdOutput": {
+    "apigeckocraftGraphQLAPIIdOutput": {
       "Type": "String",
-      "Description": "Input parameter describing GraphQLAPIIdOutput attribute for api/minedash resource"
+      "Description": "Input parameter describing GraphQLAPIIdOutput attribute for api/geckocraft resource"
     },
-    "apiminedashGraphQLAPIEndpointOutput": {
+    "apigeckocraftGraphQLAPIEndpointOutput": {
       "Type": "String",
-      "Description": "Input parameter describing GraphQLAPIEndpointOutput attribute for api/minedash resource"
+      "Description": "Input parameter describing GraphQLAPIEndpointOutput attribute for api/geckocraft resource"
     }
   },
   "Resources": {
@@ -63,7 +62,7 @@
           "Fn::Sub": "/amplify/${ProjectName}/appsyncUrl"
         },
         "Value": {
-          "Ref": "apiminedashGraphQLAPIEndpointOutput"
+          "Ref": "apigeckocraftGraphQLAPIEndpointOutput"
         }
       }
     },
@@ -75,11 +74,10 @@
           "Fn::Sub": "/amplify/${ProjectName}/cognitoPoolId"
         },
         "Value": {
-          "Ref": "authminedash438869b0UserPoolId"
+          "Ref": "authgeckocraft32bfb799IdentityPoolId"
         }
       }
     }
   },
-  "Outputs": {},
-  "Description": "{\"createdOn\":\"Mac\",\"createdBy\":\"Amplify\",\"createdWith\":\"7.6.2\",\"stackType\":\"custom-customCloudformation\",\"metadata\":{}}"
+  "Outputs": {}
 }

@@ -1,6 +1,6 @@
 {
   "auth": {
-    "minedash438869b0": {
+    "geckocraft32bfb799": {
       "service": "Cognito",
       "providerPlugin": "awscloudformation",
       "dependsOn": [],
@@ -13,7 +13,10 @@
           "EMAIL"
         ],
         "signupAttributes": [
-          "EMAIL"
+          "EMAIL",
+          "FAMILY_NAME",
+          "GIVEN_NAME",
+          "NAME"
         ],
         "passwordProtectionSettings": {
           "passwordPolicyMinLength": 8,
@@ -27,22 +30,27 @@
           "EMAIL"
         ]
       }
-    },
-    "userPoolGroups": {
-      "service": "Cognito-UserPool-Groups",
+    }
+  },
+  "api": {
+    "geckocraft": {
+      "service": "AppSync",
       "providerPlugin": "awscloudformation",
-      "dependsOn": [
-        {
-          "category": "auth",
-          "resourceName": "minedash438869b0",
-          "attributes": [
-            "UserPoolId",
-            "AppClientIDWeb",
-            "AppClientID",
-            "IdentityPoolId"
+      "output": {
+        "authConfig": {
+          "defaultAuthentication": {
+            "authenticationType": "AMAZON_COGNITO_USER_POOLS",
+            "userPoolConfig": {
+              "userPoolId": "authgeckocraft32bfb799"
+            }
+          },
+          "additionalAuthenticationProviders": [
+            {
+              "authenticationType": "AWS_IAM"
+            }
           ]
         }
-      ]
+      }
     }
   },
   "custom": {
@@ -52,7 +60,7 @@
       "dependsOn": [
         {
           "category": "auth",
-          "resourceName": "minedash438869b0",
+          "resourceName": "geckocraft32bfb799",
           "attributes": [
             "IdentityPoolId",
             "IdentityPoolName",
@@ -73,7 +81,7 @@
       "dependsOn": [
         {
           "category": "auth",
-          "resourceName": "minedash438869b0",
+          "resourceName": "geckocraft32bfb799",
           "attributes": [
             "IdentityPoolId",
             "IdentityPoolName",
@@ -88,69 +96,10 @@
         },
         {
           "category": "api",
-          "resourceName": "minedash",
+          "resourceName": "geckocraft",
           "attributes": [
             "GraphQLAPIIdOutput",
             "GraphQLAPIEndpointOutput"
-          ]
-        }
-      ]
-    }
-  },
-  "api": {
-    "minedash": {
-      "service": "AppSync",
-      "providerPlugin": "awscloudformation",
-      "output": {
-        "authConfig": {
-          "defaultAuthentication": {
-            "authenticationType": "AMAZON_COGNITO_USER_POOLS",
-            "userPoolConfig": {
-              "userPoolId": "authminedash438869b0"
-            }
-          },
-          "additionalAuthenticationProviders": [
-            {
-              "authenticationType": "AWS_IAM"
-            }
-          ]
-        }
-      }
-    },
-    "AdminQueries": {
-      "service": "API Gateway",
-      "providerPlugin": "awscloudformation",
-      "authorizationType": "AMAZON_COGNITO_USER_POOLS",
-      "dependsOn": [
-        {
-          "category": "auth",
-          "resourceName": "minedash438869b0",
-          "attributes": [
-            "UserPoolId"
-          ]
-        },
-        {
-          "category": "function",
-          "resourceName": "AdminQueriesd5096e53",
-          "attributes": [
-            "Arn",
-            "Name"
-          ]
-        }
-      ]
-    }
-  },
-  "function": {
-    "AdminQueriesd5096e53": {
-      "service": "Lambda",
-      "providerPlugin": "awscloudformation",
-      "build": true,
-      "dependsOn": [
-        {
-          "category": "auth",
-          "resourceName": "minedash438869b0",
-          "attributes": [
-            "UserPoolId"
           ]
         }
       ]

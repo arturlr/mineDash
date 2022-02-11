@@ -1,12 +1,12 @@
 {
   "version": 1,
   "serviceConfiguration": {
-    "apiName": "minedash",
+    "apiName": "geckocraft",
     "serviceName": "AppSync",
-    "gqlSchemaPath": "/Users/artrodri/github/home/minedash/amplify/backend/api/minedash/schema.graphql",
+    "gqlSchemaPath": "/Users/artrodri/github/home/minedash/amplify/backend/api/geckocraft/schema.graphql",
     "defaultAuthType": {
       "mode": "AMAZON_COGNITO_USER_POOLS",
-      "cognitoUserPoolId": "authminedash438869b0"
+      "cognitoUserPoolId": "authgeckocraft32bfb799"
     },
     "additionalAuthTypes": [
       {

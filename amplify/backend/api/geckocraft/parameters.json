@@ -1,10 +1,10 @@
 {
-  "AppSyncApiName": "minedash",
+  "AppSyncApiName": "geckocraft",
   "DynamoDBBillingMode": "PAY_PER_REQUEST",
   "DynamoDBEnableServerSideEncryption": false,
   "AuthCognitoUserPoolId": {
     "Fn::GetAtt": [
-      "authminedash438869b0",
+      "authgeckocraft32bfb799",
       "Outputs.UserPoolId"
     ]
   }
