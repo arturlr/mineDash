@@ -47,206 +47,207 @@
   },
   "Outputs": {
     "ApiUrl": {
-        "Value": {
-            "Fn::Sub": "https://${ApiGw}.execute-api.${AWS::Region}.amazonaws.com/v1/"
-        }
+      "Value": {
+        "Fn::Sub": "https://${ApiGw}.execute-api.${AWS::Region}.amazonaws.com/v1/"
+      }
     }
-},
-"Resources": {
+  },
+  "Resources": {
     "ApiGwDeployment": {
-        "Type": "AWS::ApiGateway::Deployment",
-        "DependsOn": "ApiGwMethod",
-        "Properties": {
-            "RestApiId": {
-                "Ref": "ApiGw"
-            },
-            "Description": {
-                "Fn::Sub": "${ProjectName} ${env} Rest Api Deployment"
-            },
-            "StageName": "Stage"
-        }
+      "Type": "AWS::ApiGateway::Deployment",
+      "DependsOn": "ApiGwMethod",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "ApiGw"
+        },
+        "Description": {
+          "Fn::Sub": "${ProjectName} ${env} Rest Api Deployment"
+        },
+        "StageName": "Stage"
+      }
     },
     "ApiGwAuthorizer": {
-        "Type": "AWS::ApiGateway::Authorizer",
-        "DependsOn": "ApiGwDeployment",
-        "Properties": {
-            "IdentitySource": "method.request.header.authorization",
-            "Name": "CognitoAuthorizer",
-            "ProviderARNs": [
-                {
-                    "Fn::Sub": [
-                        "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${PoolApi}",
-                        {
-                            "PoolApi": {
-                                "Ref": "authgeckocraft32bfb799IdentityPoolId"
-                            }
-                        }
-                    ]
+      "Type": "AWS::ApiGateway::Authorizer",
+      "DependsOn": "ApiGwDeployment",
+      "Properties": {
+        "IdentitySource": "method.request.header.authorization",
+        "Name": "CognitoAuthorizer",
+        "ProviderARNs": [
+          {
+            "Fn::Sub": [
+              "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${PoolApi}",
+              {
+                "PoolApi": {
+                  "Ref": "authgeckocraft32bfb799UserPoolId"
                 }
-            ],
-            "RestApiId": {
-                "Ref": "ApiGw"
-            },
-            "Type": "COGNITO_USER_POOLS"
-        }
+              }
+            ]
+          }
+        ],
+        "RestApiId": {
+          "Ref": "ApiGw"
+        },
+        "Type": "COGNITO_USER_POOLS"
+      }
     },
     "ApiGwModel": {
-        "Type": "AWS::ApiGateway::Model",
-        "Properties": {
-            "ContentType": "application/json",
-            "RestApiId": {
-                "Ref": "ApiGw"
-            },
-            "Schema": {}
-        }
+      "Type": "AWS::ApiGateway::Model",
+      "Properties": {
+        "ContentType": "application/json",
+        "RestApiId": {
+          "Ref": "ApiGw"
+        },
+        "Schema": {}
+      }
     },
     "ApiGwResource": {
-        "Type": "AWS::ApiGateway::Resource",
-        "Properties": {
-            "ParentId": {
-                "Fn::GetAtt": [
-                    "ApiGw",
-                    "RootResourceId"
-                ]
-            },
-            "PathPart": "mock",
-            "RestApiId": {
-                "Ref": "ApiGw"
-            }
+      "Type": "AWS::ApiGateway::Resource",
+      "Properties": {
+        "ParentId": {
+          "Fn::GetAtt": [
+            "ApiGw",
+            "RootResourceId"
+          ]
+        },
+        "PathPart": "mock",
+        "RestApiId": {
+          "Ref": "ApiGw"
         }
+      }
     },
     "ApiGwMethod": {
-        "Type": "AWS::ApiGateway::Method",
-        "Properties": {
-            "ApiKeyRequired": false,
-            "AuthorizationType": "NONE",
-            "HttpMethod": "POST",
-            "Integration": {
-                "ConnectionType": "INTERNET",
-                "IntegrationResponses": [
-                    {
-                        "ResponseTemplates": {
-                            "application/json": "{\"message\": \"OK\"}"
-                        },
-                        "SelectionPattern": "2\\d{2}",
-                        "StatusCode": 200
-                    },
-                    {
-                        "ResponseTemplates": {
-                            "application/json": "{\"message\": \"Internal Server Error\"}"
-                        },
-                        "SelectionPattern": "5\\d{2}",
-                        "StatusCode": 500
-                    }
-                ],
-                "PassthroughBehavior": "WHEN_NO_TEMPLATES",
-                "RequestTemplates": {
-                    "application/json": "{\"statusCode\": $input.json('$.statusCode'), \"message\": $input.json('$.message')}"
-                },
-                "Type": "MOCK",
-                "TimeoutInMillis": 29000
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {
+        "ApiKeyRequired": false,
+        "AuthorizationType": "NONE",
+        "HttpMethod": "POST",
+        "Integration": {
+          "ConnectionType": "INTERNET",
+          "IntegrationResponses": [
+            {
+              "ResponseTemplates": {
+                "application/json": "{\"message\": \"OK\"}"
+              },
+              "SelectionPattern": "2\\d{2}",
+              "StatusCode": 200
             },
-            "MethodResponses": [
-                {
-                    "ResponseModels": {
-                        "application/json": {
-                            "Ref": "ApiGwModel"
-                        }
-                    },
-                    "StatusCode": 200
-                },
-                {
-                    "ResponseModels": {
-                        "application/json": {
-                            "Ref": "ApiGwModel"
-                        }
-                    },
-                    "StatusCode": 500
-                }
-            ],
-            "OperationName": "mock",
-            "ResourceId": {
-                "Ref": "ApiGwResource"
-            },
-            "RestApiId": {
-                "Ref": "ApiGw"
+            {
+              "ResponseTemplates": {
+                "application/json": "{\"message\": \"Internal Server Error\"}"
+              },
+              "SelectionPattern": "5\\d{2}",
+              "StatusCode": 500
             }
+          ],
+          "PassthroughBehavior": "WHEN_NO_TEMPLATES",
+          "RequestTemplates": {
+            "application/json": "{\"statusCode\": $input.json('$.statusCode'), \"message\": $input.json('$.message')}"
+          },
+          "Type": "MOCK",
+          "TimeoutInMillis": 29000
+        },
+        "MethodResponses": [
+          {
+            "ResponseModels": {
+              "application/json": {
+                "Ref": "ApiGwModel"
+              }
+            },
+            "StatusCode": 200
+          },
+          {
+            "ResponseModels": {
+              "application/json": {
+                "Ref": "ApiGwModel"
+              }
+            },
+            "StatusCode": 500
+          }
+        ],
+        "OperationName": "mock",
+        "ResourceId": {
+          "Ref": "ApiGwResource"
+        },
+        "RestApiId": {
+          "Ref": "ApiGw"
         }
+      }
     },
     "ApiGwv1Stage": {
-        "Type": "AWS::ApiGateway::Stage",
-        "Properties": {
-            "DeploymentId": {
-                "Ref": "ApiGwDeployment"
-            },
-            "RestApiId": {
-                "Ref": "ApiGw"
-            },
-            "StageName": "v1"
-        }
+      "Type": "AWS::ApiGateway::Stage",
+      "Properties": {
+        "DeploymentId": {
+          "Ref": "ApiGwDeployment"
+        },
+        "RestApiId": {
+          "Ref": "ApiGw"
+        },
+        "StageName": "v1"
+      }
     },
     "ApiGw": {
-        "Type": "AWS::ApiGateway::RestApi",
-        "Properties": {
-            "Name": {
-                "Fn::Sub": "${ProjectName}-${env}-api"
-            }
+      "Type": "AWS::ApiGateway::RestApi",
+      "Properties": {
+        "Name": {
+          "Fn::Sub": "${ProjectName}-${env}-api"
         }
+      }
     },
     "ApiGwIdParameter": {
-        "Type": "AWS::SSM::Parameter",
-        "Properties": {
-            "Type": "String",
-            "Name": {
-                "Fn::Sub": "/amplify/${ProjectName}/apiId"
-            },
-            "Value": {
-                "Ref": "ApiGw"
-            }
+      "Type": "AWS::SSM::Parameter",
+      "Properties": {
+        "Type": "String",
+        "Name": {
+          "Fn::Sub": "/amplify/${ProjectName}/apiId"
         },
-        "DependsOn": "ApiGw"
+        "Value": {
+          "Ref": "ApiGw"
+        }
+      },
+      "DependsOn": "ApiGw"
     },
     "ApiGwUrlParameter": {
-        "Type": "AWS::SSM::Parameter",
-        "Properties": {
-            "Type": "String",
-            "Name": {
-                "Fn::Sub": "/amplify/${ProjectName}/apiUrl"
-            },
-            "Value": {
-                "Fn::Sub": "https://${ApiGw}.execute-api.${AWS::Region}.amazonaws.com/v1/"
-            }
+      "Type": "AWS::SSM::Parameter",
+      "Properties": {
+        "Type": "String",
+        "Name": {
+          "Fn::Sub": "/amplify/${ProjectName}/apiUrl"
         },
-        "DependsOn": "ApiGw"
+        "Value": {
+          "Fn::Sub": "https://${ApiGw}.execute-api.${AWS::Region}.amazonaws.com/v1/"
+        }
+      },
+      "DependsOn": "ApiGw"
     },
     "ApiGwParentIdParameter": {
-        "Type": "AWS::SSM::Parameter",
-        "Properties": {
-            "Type": "String",
-            "Name": {
-                "Fn::Sub": "/amplify/${ProjectName}/apiParentId"
-            },
-            "Value": {
-                "Fn::GetAtt": [
-                    "ApiGw",
-                    "RootResourceId"
-                ]
-            }
+      "Type": "AWS::SSM::Parameter",
+      "Properties": {
+        "Type": "String",
+        "Name": {
+          "Fn::Sub": "/amplify/${ProjectName}/apiParentId"
         },
-        "DependsOn": "ApiGw"
+        "Value": {
+          "Fn::GetAtt": [
+            "ApiGw",
+            "RootResourceId"
+          ]
+        }
+      },
+      "DependsOn": "ApiGw"
     },
     "ApiGwAuthorizerIdParameter": {
-        "Type": "AWS::SSM::Parameter",
-        "Properties": {
-            "Type": "String",
-            "Name": {
-                "Fn::Sub": "/amplify/${ProjectName}/apiAuthId"
-            },
-            "Value": {
-                "Ref": "ApiGwAuthorizer"
-            }
+      "Type": "AWS::SSM::Parameter",
+      "Properties": {
+        "Type": "String",
+        "Name": {
+          "Fn::Sub": "/amplify/${ProjectName}/apiAuthId"
         },
-        "DependsOn": "ApiGw"
+        "Value": {
+          "Ref": "ApiGwAuthorizer"
+        }
+      },
+      "DependsOn": "ApiGw"
     }
-}
+  },
+  "Description": "{\"createdOn\":\"Mac\",\"createdBy\":\"Amplify\",\"createdWith\":\"7.6.19\",\"stackType\":\"custom-customCloudformation\",\"metadata\":{}}"
 }

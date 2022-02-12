@@ -74,10 +74,11 @@
           "Fn::Sub": "/amplify/${ProjectName}/cognitoPoolId"
         },
         "Value": {
-          "Ref": "authgeckocraft32bfb799IdentityPoolId"
+          "Ref": "authgeckocraft32bfb799UserPoolId"
         }
       }
     }
   },
-  "Outputs": {}
+  "Outputs": {},
+  "Description": "{\"createdOn\":\"Mac\",\"createdBy\":\"Amplify\",\"createdWith\":\"7.6.19\",\"stackType\":\"custom-customCloudformation\",\"metadata\":{}}"
 }
